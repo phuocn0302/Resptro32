@@ -1,20 +1,20 @@
 #pragma once
+#include <Arduino.h> 
 #include <TFT_eSPI.h>
 #include <SPI.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <freertos/semphr.h>
-#include <TFT_eSPI.h>
 
 // Common constants and enums
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 160
 #define BORDER_SIZE 4
-#define MENU_ITEMS 2
+#define MENU_ITEMS 3 
 
-enum GameState { STATE_MENU, STATE_SNAKE, STATE_PONG};
-extern TFT_eSPI tft;  // Declaration for external access
-extern volatile GameState current_state;  // Declaration
+enum GameState { STATE_MENU, STATE_SNAKE, STATE_PONG, STATE_LIVE_PIXEL };
+extern TFT_eSPI tft;
+extern volatile GameState current_state;
 extern int menu_selection;
 extern const char *game_names[MENU_ITEMS];
 

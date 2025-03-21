@@ -6,11 +6,12 @@
 
 #include "pong_game.h"
 #include "snake_game.h"
+#include "live_pixel.h"
 
 TFT_eSPI tft;
 volatile GameState current_state = STATE_MENU;
 int menu_selection = 0;
-const char *game_names[MENU_ITEMS] = {"Snake", "Pong"};
+const char *game_names[MENU_ITEMS] = {"Snake", "Pong", "Live Pixel"};
 
 void draw_centered_text(const char *text, int y, uint16_t color, int size) {
     tft.setTextSize(size);
@@ -55,6 +56,10 @@ void handle_input(void *pv) {
                         current_state = STATE_PONG;
                         pong_launch_tasks();
                         break;
+                    case 2:
+                        current_state = STATE_LIVE_PIXEL;
+                        live_pixel_launch_tasks();
+                        break;
                 }
             }
         }
@@ -76,6 +81,7 @@ void setup() {
 
     snake_init_mutex();
     pong_init_mutex();
+    live_pixel_init_mutex();
 
     show_menu();
     xTaskCreate(handle_input, "MainInput", 4096, NULL, 1, NULL);

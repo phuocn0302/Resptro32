@@ -31,7 +31,7 @@ volatile int new_dx = 0;
 volatile int new_dy = 0;
 volatile bool input_received = false;
 volatile bool snake_position_updated = false;
-volatile bool self_ate = false'
+volatile bool self_ate = false;
 
 void IRAM_ATTR handle_button_press(int buttonIndex) {
     int temp_dx = DIRECTION_VECTORS[buttonIndex][0];
