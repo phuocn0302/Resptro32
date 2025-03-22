@@ -100,8 +100,8 @@ export default class UIManager {
             return;
         }
         
-        this.canvasManager.applyUploadedImage(uploadedImage, (x, y, color) => {
-            this.wsManager.sendPixelData(x, y, color);
+        this.canvasManager.applyUploadedImage(uploadedImage, (pixelArray) => {
+            this.wsManager.sendFullImageData(pixelArray);
         });
     }
     

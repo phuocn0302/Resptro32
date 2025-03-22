@@ -46,7 +46,7 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 	defer ws.Close()
 
 	// Configure WebSocket
-	ws.SetReadLimit(1024)
+	ws.SetReadLimit(65536)
 	ws.SetReadDeadline(time.Now().Add(60 * time.Second))
 	ws.SetPongHandler(func(string) error {
 		ws.SetReadDeadline(time.Now().Add(60 * time.Second))
@@ -85,6 +85,20 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 		}
 
 		msgStr := string(msg)
+
+		// Handle full image data transfer
+		if strings.HasPrefix(msgStr, "full,") {
+			log.Printf("Received bulk image data from %s", clientIP)
+			for client := range clients {
+				if err := client.WriteMessage(messageType, msg); err != nil {
+					log.Printf("Error sending bulk data to client: %v", err)
+					client.Close()
+					delete(clients, client)
+				}
+			}
+			continue
+		}
+
 		log.Printf("Received from %s: %s", clientIP, msgStr)
 
 		// Handle special commands

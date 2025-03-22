@@ -136,6 +136,8 @@ export default class CanvasManager {
         const imageData = tempCtx.getImageData(0, 0, this.gridSize, this.gridSize);
         const pixels = imageData.data;
         
+        const allPixelColors = new Array(this.gridSize * this.gridSize);
+        
         for (let y = 0; y < this.gridSize; y++) {
             for (let x = 0; x < this.gridSize; x++) {
                 const index = (y * this.gridSize + x) * 4;
@@ -145,11 +147,17 @@ export default class CanvasManager {
                 
                 const hexColor = `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
                 
-                this.drawPixel(x, y, hexColor, sendCallback);
+                allPixelColors[y * this.gridSize + x] = hexColor;
+
+                this.drawPixel(x, y, hexColor, null);
             }
         }
         
         this.drawGrid();
+        
+        if (sendCallback) {
+            sendCallback(allPixelColors);
+        }
     }
     
     redrawCanvas() {

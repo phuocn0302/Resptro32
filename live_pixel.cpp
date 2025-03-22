@@ -51,7 +51,45 @@ void reset_screen()
     tft.fillRect(0, 0, 128, 128, TFT_WHITE); 
 }
 
+void draw_image(uint16_t* colorArray, int width, int height) {
+    for (int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
+            int index = y * width + x;
+            int px = x * 4;
+            int py = y * 4;
+            tft.fillRect(px, py, 4, 4, colorArray[index]);
+        }
+    }
+}
+
 void on_msg_callback(WebsocketsMessage message) {
+    String msg = message.data();
+    
+    if (msg.startsWith("full,")) {
+        String pixelData = msg.substring(5);
+        uint16_t imageArray[1024];
+        int index = 0;
+        
+        while (pixelData.length() > 0 && index < 1024) {
+            int commaPos = pixelData.indexOf(',');
+            String colorHex;
+            
+            if (commaPos > 0) {
+                colorHex = pixelData.substring(0, commaPos);
+                pixelData = pixelData.substring(commaPos + 1);
+            } else {
+                colorHex = pixelData;
+                pixelData = "";
+            }
+
+            imageArray[index] = (uint16_t)strtol(colorHex.c_str(), NULL, 16);
+            index++;
+        }
+        
+        draw_image(imageArray, 32, 32);
+        return;
+    } 
+
     int x, y;
     uint16_t colorRGB565;
     sscanf(message.data().c_str(), "%d,%d,%hx", &x, &y, &colorRGB565);

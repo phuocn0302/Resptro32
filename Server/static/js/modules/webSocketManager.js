@@ -113,6 +113,23 @@ export default class WebSocketManager {
             console.warn("WebSocket not connected, can't send data");
         }
     }
+
+    sendFullImageData(pixelArray) {
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+            const rgb565Array = pixelArray.map(color => {
+                let r = parseInt(color.substr(1, 2), 16);
+                let g = parseInt(color.substr(3, 2), 16);
+                let b = parseInt(color.substr(5, 2), 16);
+                return ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3);
+            });
+            
+            // Format: "full,rgb565_1,rgb565_2,...rgb565_1024"
+            const message = "full," + rgb565Array.map(color => color.toString(16)).join(',');
+            this.ws.send(message);
+        } else {
+            console.warn("WebSocket not connected, can't send full image data");
+        }
+    }
     
     setPixelDataCallback(callback) {
         this.onPixelDataReceived = callback;
