@@ -3,3 +3,4 @@
 
 void pong_launch_tasks();
 void pong_init_mutex();
+void pong_exit();

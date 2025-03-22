@@ -1,4 +1,3 @@
-#include "common.h"
 #include "pong_game.h"
 
 struct PongGame {
@@ -21,6 +20,8 @@ const int MAX_SCORE = 5;
 
 PongGame pong;
 SemaphoreHandle_t pong_mutex;
+TaskHandle_t pong_task_handle = NULL;
+TaskHandle_t pong_input_task_handle = NULL;
 
 void initialize_pong_game() {
     xSemaphoreTake(pong_mutex, portMAX_DELAY);
@@ -63,7 +64,6 @@ void pong_input_task(void *pv) {
         xSemaphoreGive(pong_mutex);
         vTaskDelay(pdMS_TO_TICKS(20));
     }
-    vTaskDelete(NULL);
 }
 
 void erase_previous_positions(int prev_player_y, int prev_ai_y, Position prev_ball) {
@@ -148,6 +148,21 @@ void render_game_state() {
     tft.print(pong.ai_score);
 }
 
+void pong_gameover() {
+    tft.fillScreen(TFT_BLACK);
+    const char *result =
+        pong.player_score > pong.ai_score ? "You Win!" : "Game Over!";
+    draw_centered_text(result, 60, TFT_WHITE, 1);
+
+    xSemaphoreGive(pong_mutex);
+    pong_exit();
+    
+    vTaskDelay(pdMS_TO_TICKS(2000));
+
+    current_state = STATE_MENU;
+    show_menu();
+}
+
 void pong_task(void *pv) {
     initialize_pong_game();
     static int prev_player_y = pong.player.y;
@@ -158,16 +173,7 @@ void pong_task(void *pv) {
         xSemaphoreTake(pong_mutex, portMAX_DELAY);
 
         if (!pong.running) {
-            tft.fillScreen(TFT_BLACK);
-            const char *result =
-                pong.player_score > pong.ai_score ? "You Win!" : "Game Over!";
-            draw_centered_text(result, 60, TFT_WHITE, 1);
-
-            xSemaphoreGive(pong_mutex);
-            vTaskDelay(pdMS_TO_TICKS(2000));
-
-            current_state = STATE_MENU;
-            show_menu();
+            pong_gameover();
             break;
         }
 
@@ -190,12 +196,23 @@ void pong_task(void *pv) {
         xSemaphoreGive(pong_mutex);
         vTaskDelay(pdMS_TO_TICKS(30));
     }
-    vTaskDelete(NULL);
 }
 
 void pong_init_mutex() { pong_mutex = xSemaphoreCreateMutex(); }
 
 void pong_launch_tasks() {
-    xTaskCreatePinnedToCore(pong_task, "Pong", 4096, NULL, 2, NULL, 1);
-    xTaskCreatePinnedToCore(pong_input_task, "PongInput", 2048, NULL, 3, NULL, 0);
+    xTaskCreatePinnedToCore(pong_task, "Pong", 4096, NULL, 2, &pong_task_handle, 1);
+    xTaskCreatePinnedToCore(pong_input_task, "PongInput", 2048, NULL, 3, &pong_input_task_handle, 0);
+}
+
+void pong_exit() {
+    if (pong_task_handle != NULL) {
+        vTaskDelete(pong_task_handle);
+        pong_task_handle = NULL;
+    }
+    
+    if (pong_input_task_handle != NULL) {
+        vTaskDelete(pong_input_task_handle);
+        pong_input_task_handle = NULL;
+    }
 }

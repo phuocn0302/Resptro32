@@ -1,4 +1,3 @@
-#include "common.h"
 #include "snake_game.h"
 
 struct SnakeGame {
@@ -18,6 +17,8 @@ const Position START_POSITION = {60, 80};
 
 SnakeGame snake;
 SemaphoreHandle_t snake_mutex;
+TaskHandle_t snake_task_handle = NULL;
+TaskHandle_t snake_input_task_handle = NULL;
 
 // Direction vectors: [Up, Left, Down, Right]
 const int DIRECTION_VECTORS[4][2] = {
@@ -65,7 +66,6 @@ void snake_input_task(void *pv) {
         }
         vTaskDelay(pdMS_TO_TICKS(10));
     }
-    vTaskDelete(NULL);
 }
 
 void initialize_snake_game() {
@@ -156,11 +156,6 @@ void handle_food_consumption() {
 }
 
 void snake_gameover() {
-    detachInterrupt(digitalPinToInterrupt(BTN_UP));
-    detachInterrupt(digitalPinToInterrupt(BTN_LEFT));
-    detachInterrupt(digitalPinToInterrupt(BTN_DOWN));
-    detachInterrupt(digitalPinToInterrupt(BTN_RIGHT));
-
     tft.fillScreen(TFT_BLACK);
     if (self_ate) {
         draw_centered_text("Fake Over!", 60, TFT_WHITE, 1);
@@ -173,6 +168,8 @@ void snake_gameover() {
     draw_centered_text(score, 80, TFT_WHITE, 1);
 
     xSemaphoreGive(snake_mutex);
+    snake_exit();
+    
     vTaskDelay(pdMS_TO_TICKS(2000));
 
     current_state = STATE_MENU;
@@ -186,10 +183,6 @@ void snake_task(void *pv) {
 
     while (current_state == STATE_SNAKE) {
         xSemaphoreTake(snake_mutex, portMAX_DELAY);
-
-        tft.setTextSize(1);
-        tft.setCursor(0, 0);
-        tft.print(snake_position_updated);
 
         if (!snake.running) {
             snake_gameover();
@@ -214,8 +207,6 @@ void snake_task(void *pv) {
         xSemaphoreGive(snake_mutex);
         vTaskDelay(pdMS_TO_TICKS(snake.speed));
     }
-
-    vTaskDelete(NULL);
 }
 
 void snake_init_mutex() { snake_mutex = xSemaphoreCreateMutex(); }
@@ -228,6 +219,23 @@ void snake_launch_tasks() {
     attachInterrupt(digitalPinToInterrupt(BTN_DOWN), btnDownISR, FALLING);
     attachInterrupt(digitalPinToInterrupt(BTN_RIGHT), btnRightISR, FALLING);
 
-    xTaskCreatePinnedToCore(snake_task, "Snake", 4096, NULL, 2, NULL, 1);
-    xTaskCreatePinnedToCore(snake_input_task, "SnakeInput", 2048, NULL, 3, NULL, 0);
+    xTaskCreatePinnedToCore(snake_task, "Snake", 4096, NULL, 2, &snake_task_handle, 1);
+    xTaskCreatePinnedToCore(snake_input_task, "SnakeInput", 2048, NULL, 3, &snake_input_task_handle, 0);
+}
+
+void snake_exit() {
+    detachInterrupt(digitalPinToInterrupt(BTN_UP));
+    detachInterrupt(digitalPinToInterrupt(BTN_LEFT));
+    detachInterrupt(digitalPinToInterrupt(BTN_DOWN));
+    detachInterrupt(digitalPinToInterrupt(BTN_RIGHT));
+
+    if (snake_task_handle != NULL) {
+        vTaskDelete(snake_task_handle);
+        snake_task_handle = NULL;
+    }
+    
+    if (snake_input_task_handle != NULL) {
+        vTaskDelete(snake_input_task_handle);
+        snake_input_task_handle = NULL;
+    }
 }

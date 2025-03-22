@@ -1,16 +1,21 @@
 #include "live_pixel.h"
-#include "common.h"
-#include <WiFi.h>
-#include <ArduinoWebsockets.h>
 
-const char *WIFI_SSID = "";         // Change to your WiFi SSID
-const char *WIFI_PASSWORD = "";    // Change to your WiFi password
-// Auto-connect to the server running on the computer
-const char *SERVER_HOST = "ws://ip:port/ws"; // Replace with your computer's IP
+const char *WIFI_SSID = "Khanh Hoa";         // Change to your WiFi SSID
+const char *WIFI_PASSWORD = "0845540663";    // Change to your WiFi password
+const char *SERVER_HOST = "ws://192.168.1.6:8080/ws";
 
 using namespace websockets;
 WebsocketsClient client;
+
 QueueHandle_t pixelQueue;
+TaskHandle_t server_task_handle = NULL;
+TaskHandle_t display_task_handle = NULL;
+
+struct PixelData {
+    int x, y;
+    uint16_t color;
+};
+
 String esp32_ip = "Connecting...";
 bool websocket_connected = false;
 unsigned long last_reconnect_attempt = 0;
@@ -32,7 +37,7 @@ void connect_wifi() {
         tft.fillScreen(TFT_BLACK);
         String ipText = "IP: " + esp32_ip;
         draw_centered_text(ipText.c_str(), 135, TFT_WHITE, 1);
-        draw_centered_text("Connecting to server...", 145, TFT_WHITE, 1);
+        draw_centered_text("Connect server...", 145, TFT_WHITE, 1);
     } else {
         tft.fillScreen(TFT_BLACK);
         draw_centered_text("WiFi Failed", 135, TFT_RED, 1);
@@ -55,7 +60,7 @@ void on_msg_callback(WebsocketsMessage message) {
         reset_screen();
     }
 
-    if (x >= 0 && x < 64 && y >= 0 && y < 64) {
+    if (x >= 0 && x < 32 && y >= 0 && y < 32) {
         PixelData pixel = {x, y, colorRGB565};
         
         if (uxQueueSpacesAvailable(pixelQueue) > 0) {
@@ -67,7 +72,7 @@ void on_msg_callback(WebsocketsMessage message) {
 void on_events_callback(WebsocketsEvent event, String data) {
     if(event == WebsocketsEvent::ConnectionOpened) {
         websocket_connected = true;
-        tft.fillScreen(TFT_BLACK);
+        reset_screen();
         draw_centered_text("Connected!", 135, TFT_GREEN, 1);
         String ipText = "IP: " + esp32_ip;
         draw_centered_text(ipText.c_str(), 145, TFT_WHITE, 1);
@@ -110,14 +115,16 @@ void connect_server() {
     tft.fillScreen(TFT_BLACK);
     String ipText = "IP: " + esp32_ip;
     draw_centered_text(ipText.c_str(), 135, TFT_WHITE, 1);
-    draw_centered_text("Connecting to server...", 145, TFT_WHITE, 1);
-    reset_screen();
+    draw_centered_text("Connect server...", 145, TFT_WHITE, 1);
     
     bool connected = client.connect(SERVER_HOST);
     if (!connected) {
         tft.fillScreen(TFT_BLACK);
         draw_centered_text("Connect failed", 135, TFT_RED, 1);
         draw_centered_text("Retrying in 5s...", 145, TFT_WHITE, 1);
+    }
+    else {
+        reset_screen();
     }
 }
 
@@ -133,25 +140,42 @@ void server_task(void *pvParameters) {
     }
 }
 
-void live_pixel_init_mutex() {
-    pixelQueue = xQueueCreate(500, sizeof(PixelData));
+void live_pixel_init_queue() {
+    pixelQueue = xQueueCreate(2048, sizeof(PixelData));
 }
 
 void live_pixel_launch_tasks() {
     tft.fillScreen(TFT_BLACK);
     draw_centered_text("Starting...", 135, TFT_WHITE, 1);
     
-
     connect_wifi();
 
     client.onMessage(on_msg_callback);
     client.onEvent(on_events_callback);
     
     connect_server();
-    tft.fillRect(0, 0, 128, 128, TFT_WHITE); 
 
-    xTaskCreatePinnedToCore(server_task, "server_task", 12288, NULL, 1, NULL, 0);
-    xTaskCreatePinnedToCore(display_task, "display_task", 8192, NULL, 1, NULL, 1);
+    xTaskCreatePinnedToCore(server_task, "server_task", 12288, NULL, 1, &server_task_handle, 0);
+    xTaskCreatePinnedToCore(display_task, "display_task", 8192, NULL, 1, &display_task_handle, 1);
 }
 
-void live_pixel_loop() {}
+void live_pixel_exit() {
+    if (websocket_connected) {
+        client.close();
+        websocket_connected = false;
+    }
+    
+    if (server_task_handle != NULL) {
+        vTaskDelete(server_task_handle);
+        server_task_handle = NULL;
+    }
+    
+    if (display_task_handle != NULL) {
+        vTaskDelete(display_task_handle);
+        display_task_handle = NULL;
+    }
+    
+    if (pixelQueue != NULL) {
+        xQueueReset(pixelQueue);
+    }
+}

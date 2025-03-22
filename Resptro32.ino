@@ -29,6 +29,14 @@ void show_menu() {
 }
 
 void IRAM_ATTR menu_button_ISR() {
+    if (current_state == STATE_SNAKE) {
+        snake_exit();
+    } else if (current_state == STATE_PONG) {
+        pong_exit();
+    } else if (current_state == STATE_LIVE_PIXEL) {
+        live_pixel_exit();
+    }
+    
     current_state = STATE_MENU;
     show_menu();
 }
@@ -81,7 +89,7 @@ void setup() {
 
     snake_init_mutex();
     pong_init_mutex();
-    live_pixel_init_mutex();
+    live_pixel_init_queue();
 
     show_menu();
     xTaskCreate(handle_input, "MainInput", 4096, NULL, 1, NULL);
