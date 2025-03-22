@@ -158,23 +158,17 @@ void handle_food_consumption() {
 void snake_gameover() {
     tft.fillScreen(TFT_BLACK);
     if (self_ate) {
-        draw_centered_text("Fake Over!", 60, TFT_WHITE, 1);
+        draw_centered_text("Fake Over!", 60, TFT_WHITE, 2);
     } else {
-        draw_centered_text("Game Over!", 60, TFT_WHITE, 1);
+        draw_centered_text("Game Over!", 60, TFT_WHITE, 2);
     }
 
     char score[20];
     snprintf(score, sizeof(score), "Score: %d", snake.length - 1);
-    draw_centered_text(score, 80, TFT_WHITE, 1);
+    draw_centered_text(score, 85, TFT_WHITE, 1);
+    draw_centered_text("Press B", 105, TFT_WHITE, 1);
 
-    xSemaphoreGive(snake_mutex);
-    snake_exit();
-    
     vTaskDelay(pdMS_TO_TICKS(2000));
-
-    current_state = STATE_MENU;
-
-    show_menu();
 }
 
 void snake_task(void *pv) {
@@ -185,7 +179,10 @@ void snake_task(void *pv) {
         xSemaphoreTake(snake_mutex, portMAX_DELAY);
 
         if (!snake.running) {
+            xSemaphoreGive(snake_mutex);  
             snake_gameover();
+            vTaskSuspend(NULL);
+            vTaskSuspend(snake_input_task_handle);          
             break;
         }
 

@@ -152,15 +152,10 @@ void pong_gameover() {
     tft.fillScreen(TFT_BLACK);
     const char *result =
         pong.player_score > pong.ai_score ? "You Win!" : "Game Over!";
-    draw_centered_text(result, 60, TFT_WHITE, 1);
+    draw_centered_text(result, 60, TFT_WHITE, 2);
+    draw_centered_text("Press B", 100, TFT_WHITE, 1);
 
-    xSemaphoreGive(pong_mutex);
-    pong_exit();
-    
     vTaskDelay(pdMS_TO_TICKS(2000));
-
-    current_state = STATE_MENU;
-    show_menu();
 }
 
 void pong_task(void *pv) {
@@ -173,7 +168,10 @@ void pong_task(void *pv) {
         xSemaphoreTake(pong_mutex, portMAX_DELAY);
 
         if (!pong.running) {
+            xSemaphoreGive(pong_mutex);
             pong_gameover();
+            vTaskSuspend(NULL);
+            vTaskSuspend(pong_input_task_handle);
             break;
         }
 
