@@ -110,6 +110,7 @@ void on_msg_callback(WebsocketsMessage message) {
 void on_events_callback(WebsocketsEvent event, String data) {
     if(event == WebsocketsEvent::ConnectionOpened) {
         websocket_connected = true;
+        tft.fillScreen(TFT_BLACK);
         reset_screen();
         draw_centered_text("Connected!", 135, TFT_GREEN, 1);
         String ipText = "IP: " + esp32_ip;
