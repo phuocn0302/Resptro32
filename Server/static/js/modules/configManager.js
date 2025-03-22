@@ -1,22 +1,25 @@
+import { loadConfig, saveConfig } from '../config.js';
+
 export function loadServerConfig(serverIpInput, serverPortInput) {
-    const savedIP = localStorage.getItem("pixelArtServerIP");
-    const savedPort = localStorage.getItem("pixelArtServerPort");
+    const config = loadConfig();
     
-    if (savedIP) serverIpInput.value = savedIP;
-    if (savedPort) serverPortInput.value = savedPort;
+    serverIpInput.value = config.server.ip;
+    serverPortInput.value = config.server.port;
 }
 
 export function saveServerConfig(serverIpInput, serverPortInput) {
-    localStorage.setItem("pixelArtServerIP", serverIpInput.value);
-    localStorage.setItem("pixelArtServerPort", serverPortInput.value);
+    const config = loadConfig();
+    config.server.ip = serverIpInput.value;
+    config.server.port = serverPortInput.value;
+    
+    saveConfig(config);
 }
 
 export function updateSavedConfigDisplay(savedConfigEl) {
-    const savedIP = localStorage.getItem("pixelArtServerIP");
-    const savedPort = localStorage.getItem("pixelArtServerPort");
+    const config = loadConfig();
     
-    if (savedIP && savedPort) {
-        savedConfigEl.innerText = `Configuration saved: ${savedIP}:${savedPort}`;
+    if (config.server.ip && config.server.port) {
+        savedConfigEl.innerText = `Configuration saved: ${config.server.ip}:${config.server.port}`;
     } else {
         savedConfigEl.innerText = "";
     }

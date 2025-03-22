@@ -1,3 +1,6 @@
+import config, { getWebSocketUrl } from '../config.js';
+import { hexToRgb565, rgb565ToHex, formatPixelMessage, formatFullImageMessage } from './utils/function.js';
+
 export default class WebSocketManager {
     constructor(statusElement, connectBtn, disconnectBtn) {
         this.ws = null;
@@ -18,14 +21,17 @@ export default class WebSocketManager {
     }
     
     connect(serverIP, serverPort) {
+        config.server.ip = serverIP;
+        config.server.port = serverPort;
+        
         this.updateStatus(`Connecting to server at ${serverIP}...`, false);
-
+    
         if (this.ws) {
             this.ws.close();
         }
 
         try {
-            this.ws = new WebSocket(`ws://${serverIP}:${serverPort}/ws`);
+            this.ws = new WebSocket(getWebSocketUrl(config));
             
             this.ws.onopen = () => {
                 this.updateStatus("Connected to server!", true);
@@ -61,16 +67,16 @@ export default class WebSocketManager {
     }
     
     attemptReconnect(serverIP, serverPort) {
-        if (this.reconnectAttempts >= 5) {
-            this.updateStatus("Reconnection failed after 5 attempts", false);
+        if (this.reconnectAttempts >= config.app.reconnectAttempts) {
+            this.updateStatus(`Reconnection failed after ${config.app.reconnectAttempts} attempts`, false);
             return;
         }
-
+    
         this.reconnectAttempts++;
-        const delay = this.reconnectAttempts * 2000;
-
-        this.updateStatus(`Reconnecting in ${delay/1000}s (attempt ${this.reconnectAttempts}/5)...`, false);
-
+        const delay = this.reconnectAttempts * config.app.reconnectInterval;
+    
+        this.updateStatus(`Reconnecting in ${delay/1000}s (attempt ${this.reconnectAttempts}/${config.app.reconnectAttempts})...`, false);
+    
         clearTimeout(this.reconnectTimer);
         this.reconnectTimer = setTimeout(() => this.connect(serverIP, serverPort), delay);
     }
@@ -84,11 +90,7 @@ export default class WebSocketManager {
             
             // Convert RGB565 hex to RGB hex
             const rgb565 = parseInt(colorHex, 16);
-            const r = ((rgb565 >> 11) & 0x1F) << 3;
-            const g = ((rgb565 >> 5) & 0x3F) << 2;
-            const b = (rgb565 & 0x1F) << 3;
-            
-            const rgbHex = `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+            const rgbHex = rgb565ToHex(rgb565);
             
             if (!isNaN(numX) && !isNaN(numY) && numX >= 0 && numX < 32 && numY >= 0 && numY < 32) {
                 if (this.onPixelDataReceived) {
@@ -101,13 +103,8 @@ export default class WebSocketManager {
     }
     
     sendPixelData(x, y, color) {
-        let r = parseInt(color.substr(1, 2), 16);
-        let g = parseInt(color.substr(3, 2), 16);
-        let b = parseInt(color.substr(5, 2), 16);
-        let rgb565 = ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3);
-        
         if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-            const message = `${x},${y},${rgb565.toString(16)}`;
+            const message = formatPixelMessage(x, y, color);
             this.ws.send(message);
         } else {
             console.warn("WebSocket not connected, can't send data");
@@ -116,15 +113,7 @@ export default class WebSocketManager {
 
     sendFullImageData(pixelArray) {
         if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-            const rgb565Array = pixelArray.map(color => {
-                let r = parseInt(color.substr(1, 2), 16);
-                let g = parseInt(color.substr(3, 2), 16);
-                let b = parseInt(color.substr(5, 2), 16);
-                return ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3);
-            });
-            
-            // Format: "full,rgb565_1,rgb565_2,...rgb565_1024"
-            const message = "full," + rgb565Array.map(color => color.toString(16)).join(',');
+            const message = formatFullImageMessage(pixelArray);
             this.ws.send(message);
         } else {
             console.warn("WebSocket not connected, can't send full image data");

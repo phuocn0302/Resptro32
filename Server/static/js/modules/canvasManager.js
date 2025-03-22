@@ -1,12 +1,15 @@
+import config from '../config.js';
+import { flattenPixelData, rgbToHex } from './utils/function.js';
+
 export default class CanvasManager {
-    constructor(canvas, gridSize) {
+    constructor(canvas) {
         this.canvas = canvas;
         this.ctx = canvas.getContext("2d");
-        this.gridSize = gridSize;
-        this.pixelSize = canvas.width / gridSize;
+        this.gridSize = config.canvas.gridSize;
+        this.pixelSize = canvas.width / this.gridSize;
         this.pixelData = this.createEmptyPixelData();
         this.canvasHistory = [];
-        this.maxHistorySteps = 10;
+        this.maxHistorySteps = config.app.maxHistorySteps;
         this.drawing = false;
         this.erasing = false;
         this.lastX = -1;
@@ -19,7 +22,7 @@ export default class CanvasManager {
         for (let y = 0; y < this.gridSize; y++) {
             data[y] = [];
             for (let x = 0; x < this.gridSize; x++) {
-                data[y][x] = "#FFFFFF";
+                data[y][x] = config.canvas.defaultColor;
             }
         }
         return data;
@@ -136,8 +139,6 @@ export default class CanvasManager {
         const imageData = tempCtx.getImageData(0, 0, this.gridSize, this.gridSize);
         const pixels = imageData.data;
         
-        const allPixelColors = new Array(this.gridSize * this.gridSize);
-        
         for (let y = 0; y < this.gridSize; y++) {
             for (let x = 0; x < this.gridSize; x++) {
                 const index = (y * this.gridSize + x) * 4;
@@ -145,10 +146,9 @@ export default class CanvasManager {
                 const g = pixels[index + 1];
                 const b = pixels[index + 2];
                 
-                const hexColor = `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+                const hexColor = rgbToHex(r,g,b);
                 
-                allPixelColors[y * this.gridSize + x] = hexColor;
-
+                this.pixelData[y][x] = hexColor;
                 this.drawPixel(x, y, hexColor, null);
             }
         }
@@ -156,7 +156,8 @@ export default class CanvasManager {
         this.drawGrid();
         
         if (sendCallback) {
-            sendCallback(allPixelColors);
+            const flatPixelArray = flattenPixelData(this.pixelData, this.gridSize, this.gridSize);
+            sendCallback(flatPixelArray);
         }
     }
     
