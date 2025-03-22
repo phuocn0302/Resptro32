@@ -25,7 +25,7 @@ canvas {
     border-radius: 4px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
-.control-panel, .tool-panel, .server-config {
+.control-panel, .tool-panel, .server-config, .image-upload-panel {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
@@ -112,4 +112,35 @@ button:disabled {
     font-size: 12px;
     margin-top: 5px;
     color: #666;
+}
+/* Image upload styling */
+.image-upload-panel {
+    border-top: 1px solid #eee;
+    border-bottom: 1px solid #eee;
+    margin: 10px 0;
+    padding: 15px 10px;
+}
+#image-upload {
+    padding: 8px;
+    border: 1px dashed #ddd;
+    border-radius: 4px;
+    background: #fafafa;
+}
+.upload-label {
+    margin-right: 10px;
+    font-weight: bold;
+    color: #555;
+}
+#image-preview {
+    display: inline-block;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin-left: 10px;
+    background-color: #fafafa;
+}
+#apply-image-btn {
+    background-color: #2196F3;
+}
+#apply-image-btn:hover {
+    background-color: #0b7dda;
 }
