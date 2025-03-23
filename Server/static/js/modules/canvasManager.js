@@ -1,5 +1,5 @@
 import config from '../config.js';
-import { flattenPixelData, rgbToHex } from './utils/function.js';
+import { flattenPixelData, rgbToHex } from '../utils/function.js';
 
 export default class CanvasManager {
     constructor(canvas) {

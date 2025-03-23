@@ -1,5 +1,5 @@
 import config, { getWebSocketUrl } from '../config.js';
-import { hexToRgb565, rgb565ToHex, formatPixelMessage, formatFullImageMessage } from './utils/function.js';
+import { hexToRgb565, rgb565ToHex, formatPixelMessage, formatFullImageMessage } from '../utils/function.js';
 
 export default class WebSocketManager {
     constructor(statusElement, connectBtn, disconnectBtn) {
