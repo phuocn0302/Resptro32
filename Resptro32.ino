@@ -1,3 +1,4 @@
+#include <User_Setup.h>
 #include <SPI.h>
 #include <TFT_eSPI.h>
 #include <freertos/FreeRTOS.h>
@@ -16,7 +17,7 @@ const char *game_names[MENU_ITEMS] = {"Snake", "Pong", "Live Pixel"};
 volatile bool menu_requested = false;
 
 #define ANIM_STEPS 24
-#define ANIM_DELAY 1 
+#define ANIM_DELAY 1
 bool animating = false;
 
 const unsigned char snake_icon[32] = {
