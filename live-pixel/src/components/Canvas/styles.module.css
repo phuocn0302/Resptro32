@@ -1,0 +1,12 @@
+.canvasContainer {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 1rem;
+}
+
+.canvas {
+    border: 1px solid #000;
+    image-rendering: pixelated;
+    cursor: crosshair;
+}

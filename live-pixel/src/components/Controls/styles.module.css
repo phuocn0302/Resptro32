@@ -1,0 +1,21 @@
+.controlGroup {
+    margin-bottom: 1rem;
+}
+
+.controlGroup label {
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+.buttonGroup {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.preview {
+    display: block;
+    margin: 1rem 0;
+    border: 1px solid #000;
+    image-rendering: pixelated;
+}
