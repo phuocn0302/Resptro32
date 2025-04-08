@@ -19,3 +19,99 @@
     border: 1px solid #000;
     image-rendering: pixelated;
 }
+
+.colorPalette {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.colorButton {
+    width: 100%;
+    aspect-ratio: 1;
+    border: 1px solid #000;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.colorButton.selected {
+    border: 3px solid #000;
+    box-shadow: 0 0 0 2px white inset;
+}
+
+.compactControlGroup {
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+}
+
+.compactControlGroup label {
+    display: inline-block;
+    min-width: 40px;
+    margin-bottom: 0;
+}
+
+.compactControlGroup input {
+    flex: 1;
+    width: 100%;
+}
+
+.compactButtonGroup {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.compactButtonGroup button {
+    white-space: nowrap;
+    min-width: 80px;
+    padding: 0.3rem 0.5rem;
+    font-size: 0.9rem;
+    border-image-repeat: stretch !important;
+    border-image-slice: 2 !important;
+    border-image-width: 2 !important;
+    image-rendering: pixelated !important;
+}
+
+.connectionForm {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    width: 100%;
+}
+
+.formStack {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    width: 100%;
+}
+
+.formField {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    width: 100%;
+}
+
+.formField input {
+    padding: 0.3rem;
+    height: auto;
+    width: 100%;
+    border-image-repeat: stretch !important;
+    border-image-slice: 2 !important;
+    border-image-width: 2 !important;
+    image-rendering: pixelated !important;
+}
+
+.formLabel {
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    padding-left: 0.25rem;
+}

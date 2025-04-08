@@ -17,7 +17,7 @@ export function CanvasProvider({ children }: { children: ReactNode }) {
     const { sendPixelData, sendFullImageData } = useSocket()
     const [state, setState] = useState<CanvasState>({
         canvasSize: CANVAS_CONFIG.gridSize,
-        pixelSize: 4,
+        pixelSize: 16, // Increased pixel size for better visibility
         currentColor: '#1cb785',
         backgroundColor: CANVAS_CONFIG.backgroundColor,
         pixelData: [],

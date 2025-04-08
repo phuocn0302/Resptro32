@@ -11,7 +11,7 @@ export function Canvas() {
         pixelData,
         backgroundColor
     } = useCanvas()
-    
+
     const {
         handleMouseDown,
         handleMouseMove,
@@ -61,7 +61,7 @@ export function Canvas() {
     }, [canvasSize, pixelSize, pixelData, backgroundColor])
 
     return (
-        <div className={styles.canvasContainer}>
+        <div className={`nes-container ${styles.canvasContainer}`}>
             <canvas
                 ref={canvasRef}
                 width={canvasSize * pixelSize}

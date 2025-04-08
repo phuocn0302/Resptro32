@@ -15,16 +15,7 @@ export function BrushControls() {
     return (
         <div className="nes-container with-title">
             <h3 className="title">Brush</h3>
-            <div className={styles.controlGroup}>
-                <label>Color:</label>
-                <input
-                    type="color"
-                    className="nes-input"
-                    value={currentColor}
-                    onChange={(e) => setCurrentColor(e.target.value)}
-                    disabled={isErasing}
-                />
-            </div>
+
             <div className={styles.controlGroup}>
                 <label>Size:</label>
                 <input

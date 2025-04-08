@@ -2,11 +2,21 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    padding: 1rem;
+    padding: 0.75rem;
+    width: 100%;
+    height: 100%;
+    border-image-repeat: stretch !important;
+    border-image-slice: 2 !important;
+    border-image-width: 2 !important;
+    border-image-outset: 0 !important;
+    image-rendering: pixelated !important;
+    background-color: white;
 }
 
 .canvas {
-    border: 1px solid #000;
     image-rendering: pixelated;
     cursor: crosshair;
+    width: min(100%, 512px);
+    height: min(100%, 512px);
+    aspect-ratio: 1;
 }

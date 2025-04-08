@@ -16,41 +16,48 @@ export function ConnectionControls() {
     return (
         <div className="nes-container with-title">
             <h3 className="title">Connection</h3>
-            <div className={styles.controlGroup}>
-                <label>Server IP:</label>
-                <input
-                    type="text"
-                    className="nes-input"
-                    value={serverIP}
-                    onChange={(e) => setServerIP(e.target.value)}
-                    disabled={isConnected}
-                />
-            </div>
-            <div className={styles.controlGroup}>
-                <label>Port:</label>
-                <input
-                    type="text"
-                    className="nes-input"
-                    value={serverPort}
-                    onChange={(e) => setServerPort(e.target.value)}
-                    disabled={isConnected}
-                />
-            </div>
-            <div className={styles.buttonGroup}>
-                <button
-                    className="nes-btn is-primary"
-                    onClick={handleConnect}
-                    disabled={isConnected}
-                >
-                    Connect
-                </button>
-                <button
-                    className="nes-btn is-error"
-                    onClick={disconnect}
-                    disabled={!isConnected}
-                >
-                    Disconnect
-                </button>
+            <div className={styles.connectionForm}>
+                <div className={styles.formStack}>
+                    <div className={styles.formField}>
+                        <label className={styles.formLabel}>IP:</label>
+                        <input
+                            type="text"
+                            className="nes-input"
+                            value={serverIP}
+                            onChange={(e) => setServerIP(e.target.value)}
+                            disabled={isConnected}
+                            style={{ marginBottom: '0.5rem' }}
+                        />
+                    </div>
+                    <div className={styles.formField}>
+                        <label className={styles.formLabel}>Port:</label>
+                        <input
+                            type="text"
+                            className="nes-input"
+                            value={serverPort}
+                            onChange={(e) => setServerPort(e.target.value)}
+                            disabled={isConnected}
+                        />
+                    </div>
+                </div>
+                <div className={styles.compactButtonGroup}>
+                    <button
+                        className="nes-btn is-primary is-small"
+                        onClick={handleConnect}
+                        disabled={isConnected}
+                        style={{ width: '45%' }}
+                    >
+                        Connect
+                    </button>
+                    <button
+                        className="nes-btn is-error is-small"
+                        onClick={disconnect}
+                        disabled={!isConnected}
+                        style={{ width: '55%' }}
+                    >
+                        Disconnect
+                    </button>
+                </div>
             </div>
         </div>
     )
