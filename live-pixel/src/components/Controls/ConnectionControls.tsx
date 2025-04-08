@@ -1,14 +1,21 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useSocket } from '../../features/socket/context/SocketContext'
 import styles from './styles.module.css'
 
 export function ConnectionControls() {
     const { isConnected, connect, disconnect } = useSocket()
-    const [serverIP, setServerIP] = useState('192.168.1.6')
-    const [serverPort, setServerPort] = useState('8080')
+    const [serverIP, setServerIP] = useState('')
+    const [serverPort, setServerPort] = useState('')
+
+    // Clear localStorage values on component mount
+    useEffect(() => {
+        localStorage.removeItem('pixelArtServerIP')
+        localStorage.removeItem('pixelArtServerPort')
+    }, [])
 
     const handleConnect = () => {
         connect(serverIP, serverPort)
+        // Only save to localStorage if user explicitly connects
         localStorage.setItem('pixelArtServerIP', serverIP)
         localStorage.setItem('pixelArtServerPort', serverPort)
     }

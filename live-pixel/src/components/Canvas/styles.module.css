@@ -2,7 +2,7 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    padding: 0.75rem;
+    padding: 0.5rem;
     width: 100%;
     height: 100%;
     border-image-repeat: stretch !important;
@@ -16,7 +16,7 @@
 .canvas {
     image-rendering: pixelated;
     cursor: crosshair;
-    width: min(100%, 512px);
-    height: min(100%, 512px);
+    width: min(100%, 400px);
+    height: min(100%, 400px);
     aspect-ratio: 1;
 }

@@ -14,11 +14,11 @@ interface CanvasContextType extends CanvasState {
 const CanvasContext = createContext<CanvasContextType | null>(null)
 
 export function CanvasProvider({ children }: { children: ReactNode }) {
-    const { sendPixelData, sendFullImageData } = useSocket()
+    const { sendPixelData, sendClearCanvas } = useSocket()
     const [state, setState] = useState<CanvasState>({
         canvasSize: CANVAS_CONFIG.gridSize,
-        pixelSize: 16, // Increased pixel size for better visibility
-        currentColor: '#1cb785',
+        pixelSize: 12.5, // Reduced pixel size to fit screen better (400px / 32 pixels = 12.5px per pixel)
+        currentColor: '#000000', // Black as default color
         backgroundColor: CANVAS_CONFIG.backgroundColor,
         pixelData: [],
         isErasing: false,
@@ -26,10 +26,39 @@ export function CanvasProvider({ children }: { children: ReactNode }) {
     })
 
     const updatePixel = (pixel: Pixel) => {
-        setState(prev => ({
-            ...prev,
-            pixelData: [...prev.pixelData, pixel]
-        }))
+        setState(prev => {
+            // Check if we're erasing or drawing
+            if (prev.isErasing && pixel.color === '#FFFFFF') {
+                // When erasing, filter out any pixel at this position
+                return {
+                    ...prev,
+                    pixelData: prev.pixelData.filter(p => !(p.x === pixel.x && p.y === pixel.y))
+                }
+            } else {
+                // When drawing, replace any existing pixel at this position
+                const existingPixelIndex = prev.pixelData.findIndex(
+                    p => p.x === pixel.x && p.y === pixel.y
+                )
+
+                if (existingPixelIndex >= 0) {
+                    // Replace existing pixel
+                    const newPixelData = [...prev.pixelData]
+                    newPixelData[existingPixelIndex] = pixel
+                    return {
+                        ...prev,
+                        pixelData: newPixelData
+                    }
+                } else {
+                    // Add new pixel
+                    return {
+                        ...prev,
+                        pixelData: [...prev.pixelData, pixel]
+                    }
+                }
+            }
+        })
+
+        // Always send pixel data to server, even when erasing
         sendPixelData(pixel.x, pixel.y, pixel.color)
     }
 
@@ -38,7 +67,8 @@ export function CanvasProvider({ children }: { children: ReactNode }) {
             ...prev,
             pixelData: []
         }))
-        sendFullImageData([])
+        // Send special clear command to the server
+        sendClearCanvas()
     }
 
     const toggleEraser = () => {

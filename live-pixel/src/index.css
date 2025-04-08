@@ -24,7 +24,7 @@ header {
 }
 
 .header-content-spacer {
-    height: 4rem;
+    height: 1.5rem;
 }
 
 .content {
@@ -33,9 +33,18 @@ header {
     gap: 1rem;
 }
 
+.status-bar {
+    margin-bottom: 1rem;
+    width: 100%;
+}
+
+:global(.status-container) {
+    padding: 0.5rem 0.75rem;
+}
+
 .main-layout {
     display: grid;
-    grid-template-columns: 1fr 2fr 1fr;
+    grid-template-columns: 1.2fr 1.6fr 1.2fr;
     gap: 1rem;
     margin-top: 0;
     align-items: flex-start;
@@ -43,12 +52,22 @@ header {
 
 .left-control {
     width: 100%;
+    display: flex;
+    flex-direction: column;
 }
 
 .right-control {
     width: 100%;
     display: flex;
     flex-direction: column;
+}
+
+.status-spacer {
+    height: 0.5rem;
+}
+
+.upload-spacer {
+    height: 1.5rem;
 }
 
 .palette-spacer {
@@ -78,7 +97,9 @@ header {
         grid-column: 1;
         grid-row: 2;
     }
-
+    .status-bar {
+        margin-bottom: 0.5rem;
+    }
 }
 
 @media (max-width: 768px) {
@@ -98,7 +119,9 @@ header {
         grid-column: 1;
         grid-row: 3;
     }
-
+    .status-bar {
+        margin-bottom: 0.5rem;
+    }
 }
 
 .color-palette-container {

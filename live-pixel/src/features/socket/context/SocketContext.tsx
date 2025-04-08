@@ -8,6 +8,8 @@ interface SocketContextType {
     disconnect: () => void
     sendPixelData: (x: number, y: number, color: string) => void
     sendFullImageData: (pixelArray: string[]) => void
+    sendClearCanvas: () => void
+    sendBatchPixelData: (pixels: { x: number, y: number, color: string }[]) => void
 }
 
 const SocketContext = createContext<SocketContextType | null>(null)
@@ -62,15 +64,49 @@ export function SocketProvider({ children }: { children: ReactNode }) {
         }, SOCKET_CONFIG.reconnectInterval)
     }
 
+    // Convert hex color to RGB565 format
+    const hexToRgb565 = (hexColor: string): number => {
+        const r = parseInt(hexColor.substr(1, 2), 16)
+        const g = parseInt(hexColor.substr(3, 2), 16)
+        const b = parseInt(hexColor.substr(5, 2), 16)
+
+        // Convert to RGB565 format (5 bits R, 6 bits G, 5 bits B)
+        return ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3)
+    }
+
     const sendPixelData = (x: number, y: number, color: string) => {
         if (socket?.readyState === WebSocket.OPEN) {
-            socket.send(`${x},${y},${color}`)
+            // Convert color to RGB565 format
+            const rgb565 = hexToRgb565(color)
+            socket.send(`${x},${y},${rgb565.toString(16)}`)
         }
     }
 
     const sendFullImageData = (pixelArray: string[]) => {
         if (socket?.readyState === WebSocket.OPEN) {
-            socket.send(`full,${pixelArray.join(',')}`)
+            // Convert all colors to RGB565 format
+            const rgb565Array = pixelArray.map(color => hexToRgb565(color).toString(16))
+            socket.send(`full,${rgb565Array.join(',')}`)
+        }
+    }
+
+    const sendClearCanvas = () => {
+        if (socket?.readyState === WebSocket.OPEN) {
+            // Send special clear command (-1, -1, #FFFFFF)
+            socket.send(`-1,-1,${hexToRgb565('#FFFFFF').toString(16)}`)
+        }
+    }
+
+    // Batch send multiple pixels at once
+    const sendBatchPixelData = (pixels: { x: number, y: number, color: string }[]) => {
+        if (socket?.readyState === WebSocket.OPEN && pixels.length > 0) {
+            // Format: "batch,x1,y1,color1,x2,y2,color2,..."
+            const pixelData = pixels.map(p => {
+                const rgb565 = hexToRgb565(p.color).toString(16)
+                return `${p.x},${p.y},${rgb565}`
+            }).join(';')
+
+            socket.send(`batch;${pixelData}`)
         }
     }
 
@@ -87,7 +123,9 @@ export function SocketProvider({ children }: { children: ReactNode }) {
             connect,
             disconnect,
             sendPixelData,
-            sendFullImageData
+            sendFullImageData,
+            sendClearCanvas,
+            sendBatchPixelData
         }}>
             {children}
         </SocketContext.Provider>

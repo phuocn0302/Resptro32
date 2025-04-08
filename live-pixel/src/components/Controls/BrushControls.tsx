@@ -3,10 +3,10 @@ import styles from './styles.module.css'
 
 export function BrushControls() {
     const {
-        currentColor,
+
         brushSize,
         isErasing,
-        setCurrentColor,
+
         setBrushSize,
         toggleEraser,
         clearCanvas
