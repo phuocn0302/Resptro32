@@ -99,6 +99,29 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
+		// Handle batch pixel updates
+		if strings.HasPrefix(msgStr, "batch;") {
+			pixelData := strings.TrimPrefix(msgStr, "batch;")
+			pixelUpdates := strings.Split(pixelData, ";")
+
+			log.Printf("Received batch update with %d pixels from %s", len(pixelUpdates), clientIP)
+
+			// For ESP32 clients, we need to send a more efficient format
+			// Create a compressed batch format that ESP32 can handle
+			// Format: "compressed;count;x1,y1,color1;x2,y2,color2;..."
+			compressedMsg := fmt.Sprintf("compressed;%d;%s", len(pixelUpdates), pixelData)
+
+			// Broadcast the compressed batch update to all clients
+			for client := range clients {
+				if err := client.WriteMessage(websocket.TextMessage, []byte(compressedMsg)); err != nil {
+					log.Printf("Error sending batch data to client: %v", err)
+					client.Close()
+					delete(clients, client)
+				}
+			}
+			continue
+		}
+
 		log.Printf("Received from %s: %s", clientIP, msgStr)
 
 		// Handle special commands

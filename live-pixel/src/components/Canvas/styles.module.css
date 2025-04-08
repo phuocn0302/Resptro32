@@ -1,0 +1,22 @@
+.canvasContainer {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0.5rem;
+    width: 100%;
+    height: 100%;
+    border-image-repeat: stretch !important;
+    border-image-slice: 2 !important;
+    border-image-width: 2 !important;
+    border-image-outset: 0 !important;
+    image-rendering: pixelated !important;
+    background-color: white;
+}
+
+.canvas {
+    image-rendering: pixelated;
+    cursor: crosshair;
+    width: min(100%, 400px);
+    height: min(100%, 400px);
+    aspect-ratio: 1;
+}

@@ -1,0 +1,167 @@
+.controlGroup {
+    margin-bottom: 1rem;
+}
+
+.controlGroup label {
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+.buttonGroup {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.preview {
+    display: block;
+    margin: 1rem 0;
+    border: 1px solid #000;
+    image-rendering: pixelated;
+}
+
+.previewContainer {
+    display: flex;
+    justify-content: center;
+    margin: 0.5rem 0;
+}
+
+.colorPalette {
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    gap: 0.25rem;
+    margin-top: 0.5rem;
+    max-height: 200px;
+    overflow-y: auto;
+    padding-right: 0.25rem;
+}
+
+.loadingColors {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 1rem;
+}
+
+.colorButton {
+    width: 100%;
+    aspect-ratio: 1;
+    border: 1px solid #000;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: transform 0.1s ease;
+}
+
+.colorButton:hover {
+    transform: scale(1.1);
+    z-index: 1;
+}
+
+.colorButton.selected {
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 1px #000 inset, 0 0 0 1px #000;
+}
+
+.compactControlGroup {
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+}
+
+.compactControlGroup label {
+    display: inline-block;
+    min-width: 40px;
+    margin-bottom: 0;
+}
+
+.compactControlGroup input {
+    flex: 1;
+    width: 100%;
+}
+
+.compactButtonGroup {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.compactButtonGroup button {
+    white-space: nowrap;
+    min-width: 80px;
+    padding: 0.3rem 0.5rem;
+    font-size: 0.9rem;
+    border-image-repeat: stretch !important;
+    border-image-slice: 2 !important;
+    border-image-width: 2 !important;
+    image-rendering: pixelated !important;
+}
+
+.connectionForm {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    width: 100%;
+}
+
+.formStack {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    width: 100%;
+}
+
+.formField {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    width: 100%;
+}
+
+.formField input {
+    padding: 0.3rem;
+    height: auto;
+    width: 100%;
+    border-image-repeat: stretch !important;
+    border-image-slice: 2 !important;
+    border-image-width: 2 !important;
+    image-rendering: pixelated !important;
+}
+
+.formLabel {
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    padding-left: 0.25rem;
+}
+
+/* Status display styles */
+.statusContainer {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0;
+}
+
+.statusIndicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 1px solid #000;
+}
+
+.connected {
+    background-color: #1cb785;
+    box-shadow: 0 0 5px #1cb785;
+}
+
+.disconnected {
+    background-color: #e76e55;
+    box-shadow: 0 0 5px #e76e55;
+}
+
+.statusText {
+    font-size: 0.9rem;
+}
