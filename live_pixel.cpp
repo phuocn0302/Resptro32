@@ -26,6 +26,7 @@ void connect_wifi() {
     int attempt = 0;
     
     while (WiFi.status() != WL_CONNECTED && attempt < 20) {
+        if (current_state == STATE_MENU) return;
         tft.print(".");
         vTaskDelay(pdMS_TO_TICKS(500));
         attempt++;
@@ -136,6 +137,8 @@ void display_task(void *pvParameters) {
 }
 
 void connect_server() {
+    if (current_state == STATE_MENU) return;
+    
     if (websocket_connected) {
         return;
     }

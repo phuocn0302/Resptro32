@@ -153,7 +153,7 @@ void pong_gameover() {
     const char *result =
         pong.player_score > pong.ai_score ? "You Win!" : "Game Over!";
     draw_centered_text(result, 60, TFT_WHITE, 2);
-    draw_centered_text("Press B", 100, TFT_WHITE, 1);
+    draw_centered_text("Press A", 100, TFT_WHITE, 1);
 
     vTaskDelay(pdMS_TO_TICKS(2000));
 }
