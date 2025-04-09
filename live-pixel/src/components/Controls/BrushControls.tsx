@@ -16,16 +16,20 @@ export function BrushControls() {
         <div className="nes-container with-title">
             <h3 className="title">Brush</h3>
 
-            <div className={styles.controlGroup}>
-                <label>Size:</label>
-                <input
-                    type="number"
-                    className="nes-input"
-                    value={brushSize}
-                    onChange={(e) => setBrushSize(Number(e.target.value))}
-                    min="1"
-                    max="5"
-                />
+            <div className={styles.brushSizeControl}>
+                <span className={styles.brushSizeLabel}>Size:</span>
+                <div className={styles.brushSizeButtons}>
+                    {[1, 2, 3, 4, 5].map(size => (
+                        <button
+                            key={size}
+                            className={`${styles.sizeButton} ${brushSize === size ? styles.active : ''}`}
+                            onClick={() => setBrushSize(size)}
+                            aria-label={`Set brush size to ${size}`}
+                        >
+                            {size}
+                        </button>
+                    ))}
+                </div>
             </div>
             <div className={styles.buttonGroup}>
                 <button

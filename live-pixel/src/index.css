@@ -126,6 +126,7 @@ header {
 
 .color-palette-container {
     margin-top: 0;
+    padding: 0.5rem !important;
 }
 
 /* Consistent title positioning for all containers */

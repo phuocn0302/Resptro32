@@ -7,6 +7,47 @@
     margin-bottom: 0.5rem;
 }
 
+.brushSizeControl {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.brushSizeLabel {
+    margin-right: 0.5rem;
+    flex-shrink: 0;
+}
+
+.brushSizeButtons {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.sizeButton {
+    width: 2rem;
+    height: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid #000;
+    background-color: white;
+    cursor: pointer;
+    font-family: 'Press Start 2P', cursive;
+    font-size: 0.8rem;
+    box-shadow: inset -2px -2px #adafbc;
+    image-rendering: pixelated;
+    border-image-repeat: stretch;
+    border-image-slice: 2;
+    border-image-width: 2;
+    border-image-outset: 0;
+}
+
+.sizeButton.active {
+    background-color: #209cee;
+    color: white;
+    box-shadow: inset -2px -2px #006bb3;
+}
+
 .buttonGroup {
     display: flex;
     gap: 1rem;
@@ -29,11 +70,11 @@
 .colorPalette {
     display: grid;
     grid-template-columns: repeat(10, 1fr);
-    gap: 0.25rem;
-    margin-top: 0.5rem;
-    max-height: 200px;
+    gap: 0.2rem;
+    margin-top: 0.25rem;
+    max-height: 150px;
     overflow-y: auto;
-    padding-right: 0.25rem;
+    padding: 0.1rem;
 }
 
 .loadingColors {
@@ -46,13 +87,17 @@
     width: 100%;
     aspect-ratio: 1;
     border: 1px solid #000;
-    border-radius: 3px;
+    border-radius: 2px;
     cursor: pointer;
     transition: transform 0.1s ease;
+    min-width: 0; /* Prevents buttons from growing beyond container */
+    min-height: 0; /* Ensures buttons can be smaller than default size */
+    padding: 0; /* Remove padding */
+    box-sizing: border-box; /* Include border in size calculation */
 }
 
 .colorButton:hover {
-    transform: scale(1.1);
+    transform: scale(1.05);
     z-index: 1;
 }
 
