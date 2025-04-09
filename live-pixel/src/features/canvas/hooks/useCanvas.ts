@@ -1,4 +1,4 @@
-import { useRef, useCallback, useState } from 'react'
+import { useRef, useCallback} from 'react'
 import { useCanvas } from '../context/CanvasContext'
 import { useSocket } from '../../socket/context/SocketContext'
 import { DrawOptions } from '../types/canvas.types'
