@@ -166,7 +166,7 @@ void snake_gameover() {
     char score[20];
     snprintf(score, sizeof(score), "Score: %d", snake.length - 1);
     draw_centered_text(score, 85, TFT_WHITE, 1);
-    draw_centered_text("Press B", 105, TFT_WHITE, 1);
+    draw_centered_text("Press A", 105, TFT_WHITE, 1);
 
     vTaskDelay(pdMS_TO_TICKS(2000));
 }

@@ -24,7 +24,10 @@ enum Buttons {
   BTN_LEFT = 26,
   BTN_DOWN = 25,
   BTN_RIGHT = 33,
-  BTN_MENU = 27
+  BTN_A = 27,
+  BTN_B = 32,
+  BTN_ALT = 13,
+  BTN_SHIFT = 32,
 };
 
 // Common structures

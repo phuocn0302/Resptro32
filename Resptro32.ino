@@ -151,7 +151,7 @@ void handle_input(void *pv) {
                 animate_menu_transition(old_selection, menu_selection);
                 vTaskDelay(pdMS_TO_TICKS(200));
             }
-            if (!digitalRead(BTN_DOWN) && !animating) {
+            if (!digitalRead(BTN_B) && !animating) {
                 switch (menu_selection) {
                     case 0:
                         current_state = STATE_SNAKE;
@@ -180,9 +180,10 @@ void setup() {
     pinMode(BTN_LEFT, INPUT_PULLUP);
     pinMode(BTN_DOWN, INPUT_PULLUP);
     pinMode(BTN_RIGHT, INPUT_PULLUP);
-    pinMode(BTN_MENU, INPUT_PULLUP);
+    pinMode(BTN_A, INPUT_PULLUP);
+    pinMode(BTN_B, INPUT_PULLUP);
 
-    attachInterrupt(digitalPinToInterrupt(BTN_MENU), menu_button_ISR, FALLING);
+    attachInterrupt(digitalPinToInterrupt(BTN_A), menu_button_ISR, FALLING);
 
     snake_init_mutex();
     pong_init_mutex();
