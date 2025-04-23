@@ -186,14 +186,14 @@ func main() {
 	mux := http.NewServeMux()
 
 	// Serve static files (HTML, CSS, JS)
-	fs := http.FileServer(http.Dir("./static"))
+	fs := http.FileServer(http.Dir("../live-pixel/dist"))
 	mux.Handle("/", fs)
 
 	// WebSocket route
 	mux.HandleFunc("/ws", handleConnections)
 
 	// Server address
-	serverAddr := ":8080"
+	serverAddr := ":5173"
 
 	// Print connection information
 	localIPs := getLocalIPs()
