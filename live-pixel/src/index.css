@@ -75,9 +75,7 @@ header {
 }
 
 .canvas-section {
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    display: block; /* Changed from flex to block to remove flex spacing */
 }
 
 @media (max-width: 992px) {
@@ -145,6 +143,11 @@ header {
     border-image-outset: 0 !important;
     image-rendering: pixelated !important;
     padding: 0.75rem !important;
+}
+
+/* Remove padding for canvas container specifically */
+.canvas-section .nes-container {
+    padding: 0 !important;
 }
 
 @media (max-width: 768px) {

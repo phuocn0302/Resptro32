@@ -71,6 +71,7 @@ export function Canvas() {
                 onMouseMove={handleMouseMove}
                 onMouseUp={handleMouseUp}
                 onMouseLeave={handleMouseLeave}
+                style={{ display: 'block', width: '100%', height: '100%' }}
             />
         </div>
     )
