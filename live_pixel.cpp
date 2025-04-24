@@ -91,71 +91,112 @@ void on_msg_callback(WebsocketsMessage message) {
         return;
     }
 
-    // Handle compressed batch pixel updates
+    // Static buffer for pixel data to avoid repeated memory allocation
+    static PixelData pixelBuffer[64]; // Fixed-size buffer for pixel data
+
+    // Handle chunked batch updates (new optimized format)
+    if (msg.startsWith("chunk;")) {
+        // Format: "chunk;chunk_index;total_chunks;count;x1,y1,color1;x2,y2,color2;..."
+        int firstSemi = msg.indexOf(';');
+        int secondSemi = msg.indexOf(';', firstSemi + 1);
+        int thirdSemi = msg.indexOf(';', secondSemi + 1);
+        int fourthSemi = msg.indexOf(';', thirdSemi + 1);
+
+        if (firstSemi < 0 || secondSemi < 0 || thirdSemi < 0 || fourthSemi < 0) {
+            return; // Invalid format
+        }
+
+        // Parse chunk metadata
+        int chunkIndex = msg.substring(firstSemi + 1, secondSemi).toInt();
+        int totalChunks = msg.substring(secondSemi + 1, thirdSemi).toInt();
+        int chunkSize = msg.substring(thirdSemi + 1, fourthSemi).toInt();
+        String pixelData = msg.substring(fourthSemi + 1);
+
+        // Process pixels in this chunk
+        int pixelCount = 0;
+
+        // Parse all pixels in this chunk
+        while (pixelData.length() > 0 && pixelCount < chunkSize && pixelCount < 64) {
+            int semicolonPos = pixelData.indexOf(';');
+            String pixelInfo;
+
+            if (semicolonPos > 0) {
+                pixelInfo = pixelData.substring(0, semicolonPos);
+                pixelData = pixelData.substring(semicolonPos + 1);
+            } else {
+                pixelInfo = pixelData;
+                pixelData = "";
+            }
+
+            // Process individual pixel
+            int x, y;
+            uint16_t colorRGB565;
+            sscanf(pixelInfo.c_str(), "%d,%d,%hx", &x, &y, &colorRGB565);
+
+            if (x >= 0 && x < 32 && y >= 0 && y < 32) {
+                // Store in our buffer
+                pixelBuffer[pixelCount].x = x;
+                pixelBuffer[pixelCount].y = y;
+                pixelBuffer[pixelCount].color = colorRGB565;
+                pixelCount++;
+            }
+        }
+
+        // Process all pixels directly to screen for better performance
+        for (int i = 0; i < pixelCount; i++) {
+            int px = pixelBuffer[i].x * 4;
+            int py = pixelBuffer[i].y * 4;
+            tft.fillRect(px, py, 4, 4, pixelBuffer[i].color);
+        }
+
+        return;
+    }
+
+    // Handle compressed batch pixel updates (legacy support)
     if (msg.startsWith("compressed;")) {
         // Format: "compressed;count;x1,y1,color1;x2,y2,color2;..."
         String countStr = msg.substring(11, msg.indexOf(';', 11));
         int expectedCount = countStr.toInt();
         String batchData = msg.substring(msg.indexOf(';', 11) + 1);
 
-        // Create a temporary array to hold all pixels before sending to queue
-        // This prevents queue overflow by processing all pixels at once
-        PixelData* pixelBatch = NULL;
-        int batchSize = 0;
+        // Limit the number of pixels we process to avoid memory issues
+        const int maxPixels = 64;
+        int pixelCount = 0;
 
-        // Only allocate memory if we have a reasonable number of pixels
-        if (expectedCount > 0 && expectedCount < 1024) {
-            pixelBatch = new PixelData[expectedCount];
+        // Parse pixels up to our buffer size
+        while (batchData.length() > 0 && pixelCount < maxPixels && pixelCount < expectedCount) {
+            int semicolonPos = batchData.indexOf(';');
+            String pixelInfo;
 
-            // Parse all pixels first
-            while (batchData.length() > 0 && batchSize < expectedCount) {
-                int semicolonPos = batchData.indexOf(';');
-                String pixelInfo;
-
-                if (semicolonPos > 0) {
-                    pixelInfo = batchData.substring(0, semicolonPos);
-                    batchData = batchData.substring(semicolonPos + 1);
-                } else {
-                    pixelInfo = batchData;
-                    batchData = "";
-                }
-
-                // Process individual pixel
-                int x, y;
-                uint16_t colorRGB565;
-                sscanf(pixelInfo.c_str(), "%d,%d,%hx", &x, &y, &colorRGB565);
-
-                if (x >= 0 && x < 32 && y >= 0 && y < 32) {
-                    // Store in our batch array
-                    pixelBatch[batchSize].x = x;
-                    pixelBatch[batchSize].y = y;
-                    pixelBatch[batchSize].color = colorRGB565;
-                    batchSize++;
-                }
-            }
-
-            // Now process the batch more efficiently
-            // For large eraser operations, we can optimize by directly drawing to the screen
-            // instead of using the queue which might overflow
-            if (batchSize > 50) {
-                // Direct screen update for large batches
-                for (int i = 0; i < batchSize; i++) {
-                    int px = pixelBatch[i].x * 4;
-                    int py = pixelBatch[i].y * 4;
-                    tft.fillRect(px, py, 4, 4, pixelBatch[i].color);
-                }
+            if (semicolonPos > 0) {
+                pixelInfo = batchData.substring(0, semicolonPos);
+                batchData = batchData.substring(semicolonPos + 1);
             } else {
-                // Use queue for smaller batches
-                for (int i = 0; i < batchSize; i++) {
-                    if (uxQueueSpacesAvailable(pixelQueue) > 0) {
-                        xQueueSend(pixelQueue, &pixelBatch[i], 0);
-                    }
-                }
+                pixelInfo = batchData;
+                batchData = "";
             }
 
-            // Free the allocated memory
-            delete[] pixelBatch;
+            // Process individual pixel
+            int x, y;
+            uint16_t colorRGB565;
+            sscanf(pixelInfo.c_str(), "%d,%d,%hx", &x, &y, &colorRGB565);
+
+            if (x >= 0 && x < 32 && y >= 0 && y < 32) {
+                // Store in our buffer
+                pixelBuffer[pixelCount].x = x;
+                pixelBuffer[pixelCount].y = y;
+                pixelBuffer[pixelCount].color = colorRGB565;
+                pixelCount++;
+            }
         }
+
+        // Process all pixels directly to screen
+        for (int i = 0; i < pixelCount; i++) {
+            int px = pixelBuffer[i].x * 4;
+            int py = pixelBuffer[i].y * 4;
+            tft.fillRect(px, py, 4, 4, pixelBuffer[i].color);
+        }
+
         return;
     }
 
@@ -206,6 +247,7 @@ void display_task(void *pvParameters) {
     TickType_t lastYield = xTaskGetTickCount();
 
     while (true) {
+
         // Process multiple pixels at once if available
         batchCount = 0;
         while (batchCount < 32 && xQueueReceive(pixelQueue, &pixelBatch[batchCount], 0) == pdTRUE) {
@@ -214,23 +256,51 @@ void display_task(void *pvParameters) {
 
         // If we got any pixels, process them
         if (batchCount > 0) {
-            for (int i = 0; i < batchCount; i++) {
-                int px = pixelBatch[i].x * 4;
-                int py = pixelBatch[i].y * 4;
-                tft.fillRect(px, py, 4, 4, pixelBatch[i].color);
+            // Use a more efficient approach for drawing multiple pixels
+            // Group adjacent pixels with the same color for faster drawing
+            int startX = pixelBatch[0].x;
+            int startY = pixelBatch[0].y;
+            uint16_t currentColor = pixelBatch[0].color;
+            int width = 1;
+
+            for (int i = 1; i < batchCount; i++) {
+                // If this pixel is adjacent to the previous one and has the same color
+                if (pixelBatch[i].y == startY && pixelBatch[i].x == startX + width &&
+                    pixelBatch[i].color == currentColor) {
+                    width++; // Extend the current run
+                } else {
+                    // Draw the current run
+                    int px = startX * 4;
+                    int py = startY * 4;
+                    tft.fillRect(px, py, width * 4, 4, currentColor);
+
+                    // Start a new run
+                    startX = pixelBatch[i].x;
+                    startY = pixelBatch[i].y;
+                    currentColor = pixelBatch[i].color;
+                    width = 1;
+                }
             }
 
+            // Draw the final run
+            int px = startX * 4;
+            int py = startY * 4;
+            tft.fillRect(px, py, width * 4, 4, currentColor);
+
             // Yield periodically to prevent watchdog timer issues
-            if (xTaskGetTickCount() - lastYield > pdMS_TO_TICKS(50)) {
+            if (xTaskGetTickCount() - lastYield > pdMS_TO_TICKS(20)) {
                 vTaskDelay(1); // Short delay to allow other tasks to run
                 lastYield = xTaskGetTickCount();
             }
         } else {
             // If no pixels were available, wait for some to arrive
-            if (xQueueReceive(pixelQueue, &pixel, pdMS_TO_TICKS(50))) {
+            if (xQueueReceive(pixelQueue, &pixel, pdMS_TO_TICKS(20))) {
                 int px = pixel.x * 4;
                 int py = pixel.y * 4;
                 tft.fillRect(px, py, 4, 4, pixel.color);
+            } else {
+                // No pixels to process, yield to other tasks
+                vTaskDelay(1);
             }
         }
     }
@@ -283,8 +353,9 @@ void server_task(void *pvParameters) {
 }
 
 void live_pixel_init_queue() {
-    // Increase queue size to handle more pixels
-    pixelQueue = xQueueCreate(4096, sizeof(PixelData));
+    // Create a smaller queue size - we're now processing pixels in chunks
+    // so we don't need such a large queue
+    pixelQueue = xQueueCreate(256, sizeof(PixelData));
 }
 
 void live_pixel_launch_tasks() {

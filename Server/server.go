@@ -103,20 +103,60 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 		if strings.HasPrefix(msgStr, "batch;") {
 			pixelData := strings.TrimPrefix(msgStr, "batch;")
 			pixelUpdates := strings.Split(pixelData, ";")
+			updateCount := len(pixelUpdates)
 
-			log.Printf("Received batch update with %d pixels from %s", len(pixelUpdates), clientIP)
+			log.Printf("Received batch update with %d pixels from %s", updateCount, clientIP)
 
-			// For ESP32 clients, we need to send a more efficient format
-			// Create a compressed batch format that ESP32 can handle
-			// Format: "compressed;count;x1,y1,color1;x2,y2,color2;..."
-			compressedMsg := fmt.Sprintf("compressed;%d;%s", len(pixelUpdates), pixelData)
+			// Split large batches into smaller chunks to prevent ESP32 crashes
+			const maxChunkSize = 32 // Maximum pixels per chunk
 
-			// Broadcast the compressed batch update to all clients
-			for client := range clients {
-				if err := client.WriteMessage(websocket.TextMessage, []byte(compressedMsg)); err != nil {
-					log.Printf("Error sending batch data to client: %v", err)
-					client.Close()
-					delete(clients, client)
+			// Process in chunks if needed
+			if updateCount > maxChunkSize {
+				log.Printf("Splitting batch into chunks for ESP32 compatibility")
+
+				// Calculate number of chunks needed
+				chunkCount := (updateCount + maxChunkSize - 1) / maxChunkSize
+
+				for i := 0; i < chunkCount; i++ {
+					startIdx := i * maxChunkSize
+					endIdx := startIdx + maxChunkSize
+					if endIdx > updateCount {
+						endIdx = updateCount
+					}
+
+					// Create chunk from the subset of updates
+					chunkUpdates := pixelUpdates[startIdx:endIdx]
+					chunkData := strings.Join(chunkUpdates, ";")
+
+					// Format: "chunk;chunk_index;total_chunks;count;x1,y1,color1;x2,y2,color2;..."
+					chunkMsg := fmt.Sprintf("chunk;%d;%d;%d;%s", i, chunkCount, len(chunkUpdates), chunkData)
+
+					// Broadcast the chunk to all clients
+					for client := range clients {
+						if err := client.WriteMessage(websocket.TextMessage, []byte(chunkMsg)); err != nil {
+							log.Printf("Error sending chunk data to client: %v", err)
+							client.Close()
+							delete(clients, client)
+						}
+					}
+
+					// Add a small delay between chunks to prevent overwhelming the ESP32
+					if i < chunkCount-1 {
+						time.Sleep(10 * time.Millisecond)
+					}
+				}
+			} else {
+				// For small batches, use the compressed format
+				// Format: "compressed;count;x1,y1,color1;x2,y2,color2;..."
+				compressedMsg := fmt.Sprintf("compressed;%d;%s", updateCount, pixelData)
+
+				// Broadcast the compressed batch update to all clients
+				for client := range clients {
+					if err := client.WriteMessage(websocket.TextMessage, []byte(compressedMsg)); err != nil {
+						log.Printf("Error sending batch data to client: %v", err)
+						client.Close()
+						delete(clients, client)
+					}
 				}
 			}
 			continue
@@ -146,14 +186,14 @@ func main() {
 	mux := http.NewServeMux()
 
 	// Serve static files (HTML, CSS, JS)
-	fs := http.FileServer(http.Dir("./static"))
+	fs := http.FileServer(http.Dir("../live-pixel/dist"))
 	mux.Handle("/", fs)
 
 	// WebSocket route
 	mux.HandleFunc("/ws", handleConnections)
 
 	// Server address
-	serverAddr := ":8080"
+	serverAddr := ":5173"
 
 	// Print connection information
 	localIPs := getLocalIPs()
