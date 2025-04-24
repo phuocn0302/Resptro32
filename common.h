@@ -10,11 +10,13 @@
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 160
 #define BORDER_SIZE 4
-#define MENU_ITEMS 3 
+#define MENU_ITEMS 4
 
-enum GameState { STATE_MENU, STATE_SNAKE, STATE_PONG, STATE_LIVE_PIXEL };
+enum GameState { STATE_MENU, STATE_SNAKE, STATE_PONG, STATE_LIVE_PIXEL, STATE_WIFI_CONFIG};
 extern TFT_eSPI tft;
 extern volatile GameState current_state;
+extern volatile bool menu_requested;
+extern volatile bool exit_requested;
 extern int menu_selection;
 extern const char *game_names[MENU_ITEMS];
 

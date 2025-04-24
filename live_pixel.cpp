@@ -1,7 +1,6 @@
 #include "live_pixel.h"
+#include "wifi_config.h"
 
-const char *WIFI_SSID = "502B";
-const char *WIFI_PASSWORD = "110818032003";
 const char *SERVER_HOST = "ws://192.168.1.167:5173/ws";
 
 using namespace websockets;
@@ -23,32 +22,6 @@ const unsigned long RECONNECT_INTERVAL = 5000;  // 5 seconds between reconnectio
 
 volatile bool initialization_complete = false;
 volatile bool exit_in_progress = false;
-
-void connect_wifi() {
-    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-    int attempt = 0;
-
-    while (WiFi.status() != WL_CONNECTED && attempt < 20) {
-        if (current_state == STATE_MENU) return;
-        tft.print(".");
-        vTaskDelay(pdMS_TO_TICKS(500));
-        attempt++;
-    }
-
-    if (WiFi.status() == WL_CONNECTED) {
-        esp32_ip = WiFi.localIP().toString();
-
-        tft.fillScreen(TFT_BLACK);
-        String ipText = "IP: " + esp32_ip;
-        draw_centered_text(ipText.c_str(), 135, TFT_WHITE, 1);
-        draw_centered_text("Connect server...", 145, TFT_WHITE, 1);
-    } else {
-        tft.fillScreen(TFT_BLACK);
-        draw_centered_text("WiFi Failed", 135, TFT_RED, 1);
-        draw_centered_text("Retrying in 5s...", 145, TFT_WHITE, 1);
-        vTaskDelay(pdMS_TO_TICKS(5000));
-    }
-}
 
 void reset_screen() { tft.fillRect(0, 0, 128, 128, TFT_WHITE); }
 
@@ -301,7 +274,10 @@ void connect_server() {
     }
 
     if (WiFi.status() != WL_CONNECTED) {
-        connect_wifi();
+        tft.fillScreen(TFT_BLACK);
+        draw_centered_text("WiFi Disconnected", 60, TFT_RED, 1);
+        draw_centered_text("Press A to exit", 80, TFT_WHITE, 1);
+        exit_requested = true;
         return;
     }
 
@@ -338,6 +314,17 @@ void server_task(void *pvParameters) {
     }
 }
 
+void handle_exit_button(void *pvParameters) {
+    while (!exit_in_progress) {
+        if (!digitalRead(BTN_A)) {
+            exit_requested = true;
+            break;
+        }
+        vTaskDelay(pdMS_TO_TICKS(50));
+    }
+    vTaskDelete(NULL);
+}
+
 void live_pixel_init_queue() {
     // Create a smaller queue size - we're now processing pixels in chunks
     // so we don't need such a large queue
@@ -354,7 +341,23 @@ void live_pixel_launch_tasks() {
     display_task_handle = NULL;
 
     tft.fillScreen(TFT_BLACK);
-    draw_centered_text("Starting...", 135, TFT_WHITE, 1);
+    draw_centered_text("Starting Live Pixel...", 40, TFT_WHITE, 1);
+    
+    // Check WiFi connection first
+    if (WiFi.status() != WL_CONNECTED) {
+        tft.fillScreen(TFT_BLACK);
+        draw_centered_text("No WiFi Connection", 40, TFT_YELLOW, 1);
+        draw_centered_text("Live Pixel requires WiFi", 60, TFT_WHITE, 1);
+        draw_centered_text("Go to WiFi Config", 80, TFT_WHITE, 1);
+        draw_centered_text("Press A to exit", 110, TFT_CYAN, 1);
+        
+        // Create task to handle exit button
+        TaskHandle_t exitTaskHandle;
+        xTaskCreatePinnedToCore(handle_exit_button, "exit_button_task", 2048, NULL, 1, &exitTaskHandle, 1);
+        
+        // We won't continue initialization
+        return;
+    }
 
     if (exit_in_progress) {
         live_pixel_exit();
@@ -375,15 +378,18 @@ void live_pixel_launch_tasks() {
         return;
     }
 
-    WiFi.mode(WIFI_STA);
-    vTaskDelay(pdMS_TO_TICKS(100));
+    // Get WiFi IP address
+    esp32_ip = WiFi.localIP().toString();
+    
+    tft.fillScreen(TFT_BLACK);
+    String ipText = "IP: " + esp32_ip;
+    draw_centered_text(ipText.c_str(), 135, TFT_WHITE, 1);
+    draw_centered_text("Connect server...", 145, TFT_WHITE, 1);
 
     if (exit_in_progress) {
         live_pixel_exit();
         return;
     }
-
-    connect_wifi();
 
     client.onMessage(on_msg_callback);
     client.onEvent(on_events_callback);
@@ -420,6 +426,10 @@ void live_pixel_launch_tasks() {
         live_pixel_exit();
         return;
     }
+    
+    // Create task to handle exit button
+    TaskHandle_t exitTaskHandle;
+    xTaskCreatePinnedToCore(handle_exit_button, "exit_button_task", 2048, NULL, 1, &exitTaskHandle, 1);
 
     initialization_complete = true;
 }
@@ -454,9 +464,6 @@ void live_pixel_exit() {
         websocket_connected = false;
     }
 
-    WiFi.disconnect(true);
-    WiFi.mode(WIFI_OFF);
-
     websocket_connected = false;
     last_reconnect_attempt = 0;
     esp32_ip = "Connecting...";
@@ -464,5 +471,6 @@ void live_pixel_exit() {
     exit_in_progress = false;
 
     tft.fillScreen(TFT_BLACK);
+    menu_requested = true;
     vTaskDelay(pdMS_TO_TICKS(50));
 }

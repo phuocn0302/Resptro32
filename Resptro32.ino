@@ -8,12 +8,13 @@
 #include "pong_game.h"
 #include "snake_game.h"
 #include "live_pixel.h"
+#include "wifi_config.h"
 
 TFT_eSPI tft;
 TFT_eSprite menuSprite = TFT_eSprite(&tft);
 volatile GameState current_state = STATE_MENU;
 int menu_selection = 0;
-const char *game_names[MENU_ITEMS] = {"Snake", "Pong", "Live Pixel"};
+const char *game_names[MENU_ITEMS] = {"Snake", "Pong", "Live Pixel", "Wifi Config"};
 volatile bool menu_requested = false;
 volatile bool exit_requested = false;
 
@@ -36,8 +37,13 @@ const unsigned char pixel_icon[32] = {
 	0x44, 0x22, 0x40, 0x02, 0x40, 0x02, 0x60, 0x06, 0x7f, 0xfe, 0x3f, 0xfc, 0x9f, 0xf9, 0xc0, 0x03
 };
 
+const unsigned char wifi_icon[32] = {
+	0xc0, 0x03, 0x80, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0xe0, 0x08, 0x10, 0x13, 0xc8, 
+	0x04, 0x20, 0x01, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x01, 0xc0, 0x03
+};
+
 const unsigned char* game_icons[MENU_ITEMS] = {
-    snake_icon, pong_icon, pixel_icon
+    snake_icon, pong_icon, pixel_icon, wifi_icon
 };
 
 void draw_centered_text(const char *text, int y, uint16_t color, int size) {
@@ -75,6 +81,15 @@ void draw_menu_item_to_sprite(int item_index, int x_offset, TFT_eSprite &sprite)
     sprite.print(game_names[item_index]);
 }
 
+void show_wifi_info() {
+    if (wifi_is_connected()) {
+        String ipText = "WiFi: " + get_wifi_ip();
+        draw_centered_text(ipText.c_str(), 140, TFT_GREEN, 1);
+    } else {
+        draw_centered_text("WiFi: Not Connected", 140, TFT_RED, 1);
+    }
+}
+
 void show_menu() {
     tft.fillScreen(TFT_BLACK);
     draw_centered_text("Game Selection", 10, TFT_WHITE, 1);
@@ -86,6 +101,7 @@ void show_menu() {
     
     menuSprite.pushSprite(0, 30);
     menuSprite.deleteSprite();
+    show_wifi_info();
 }
 
 void animate_menu_transition(int old_selection, int new_selection) {
@@ -158,6 +174,10 @@ void handle_input(void *pv) {
                         current_state = STATE_LIVE_PIXEL;
                         live_pixel_launch_tasks();
                         break;
+                    case 3:
+                        current_state = STATE_WIFI_CONFIG;
+                        wifi_config_launch();
+                        break;
                 }
             }
         }
@@ -165,7 +185,20 @@ void handle_input(void *pv) {
     }
 }
 
+void try_connect_wifi() {
+    WiFi.mode(WIFI_STA);
+    WiFi.begin();
+
+    // Wait up to 10 seconds for connection
+    unsigned long startAttemptTime = millis();
+
+    while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < 5000) {
+        delay(500);
+    }
+}
+
 void setup() {
+    try_connect_wifi();
     tft.init();
     tft.fillScreen(TFT_BLACK);
     
@@ -194,6 +227,8 @@ void loop() {
             pong_exit();
         } else if (current_state == STATE_LIVE_PIXEL) {
             live_pixel_exit();
+        } else if (current_state == STATE_WIFI_CONFIG) {
+            wifi_config_exit();
         }
         current_state = STATE_MENU;
         exit_requested = false;
@@ -201,6 +236,7 @@ void loop() {
     
     if (menu_requested) {
         show_menu();
+        current_state == STATE_MENU;
         menu_requested = false;
     }
     delay(10);
