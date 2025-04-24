@@ -15,6 +15,7 @@ volatile GameState current_state = STATE_MENU;
 int menu_selection = 0;
 const char *game_names[MENU_ITEMS] = {"Snake", "Pong", "Live Pixel"};
 volatile bool menu_requested = false;
+volatile bool exit_requested = false;
 
 #define ANIM_STEPS 24
 #define ANIM_DELAY 1
@@ -123,16 +124,8 @@ void animate_menu_transition(int old_selection, int new_selection) {
 
 void IRAM_ATTR menu_button_ISR() {
     if (current_state != STATE_MENU) {
-        if (current_state == STATE_SNAKE) {
-            snake_exit();
-        } else if (current_state == STATE_PONG) {
-            pong_exit();
-        } else if (current_state == STATE_LIVE_PIXEL) {
-            live_pixel_exit();
-        }
-        
-        current_state = STATE_MENU;
-        menu_requested = true; 
+        menu_requested = true;
+        exit_requested = true;
     }
 }
 
@@ -194,6 +187,18 @@ void setup() {
 }
 
 void loop() {
+    if (exit_requested) {
+        if (current_state == STATE_SNAKE) {
+            snake_exit();
+        } else if (current_state == STATE_PONG) {
+            pong_exit();
+        } else if (current_state == STATE_LIVE_PIXEL) {
+            live_pixel_exit();
+        }
+        current_state = STATE_MENU;
+        exit_requested = false;
+    }
+    
     if (menu_requested) {
         show_menu();
         menu_requested = false;

@@ -1,8 +1,8 @@
 #include "live_pixel.h"
 
-const char *WIFI_SSID = "502B";         // Change to your WiFi SSID
-const char *WIFI_PASSWORD = "110818032003";    // Change to your WiFi password
-const char *SERVER_HOST = "ws://192.168.1.208:8080/ws";
+const char *WIFI_SSID = "502B";         
+const char *WIFI_PASSWORD = "110818032003";    
+const char *SERVER_HOST = "ws://192.168.1.167:5173/ws";
 
 using namespace websockets;
 WebsocketsClient client;
@@ -20,6 +20,9 @@ String esp32_ip = "Connecting...";
 bool websocket_connected = false;
 unsigned long last_reconnect_attempt = 0;
 const unsigned long RECONNECT_INTERVAL = 5000; // 5 seconds between reconnection attempts
+
+volatile bool initialization_complete = false;
+volatile bool exit_in_progress = false;
 
 void connect_wifi() {
     WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
@@ -242,39 +245,39 @@ void on_events_callback(WebsocketsEvent event, String data) {
 
 void display_task(void *pvParameters) {
     PixelData pixel;
-    PixelData pixelBatch[32]; // Process up to 32 pixels at once
+    PixelData pixelBatch[32]; 
     int batchCount = 0;
     TickType_t lastYield = xTaskGetTickCount();
 
     while (true) {
 
-        // Process multiple pixels at once if available
+        
         batchCount = 0;
         while (batchCount < 32 && xQueueReceive(pixelQueue, &pixelBatch[batchCount], 0) == pdTRUE) {
             batchCount++;
         }
 
-        // If we got any pixels, process them
+        
         if (batchCount > 0) {
-            // Use a more efficient approach for drawing multiple pixels
-            // Group adjacent pixels with the same color for faster drawing
+            
+            
             int startX = pixelBatch[0].x;
             int startY = pixelBatch[0].y;
             uint16_t currentColor = pixelBatch[0].color;
             int width = 1;
 
             for (int i = 1; i < batchCount; i++) {
-                // If this pixel is adjacent to the previous one and has the same color
+                
                 if (pixelBatch[i].y == startY && pixelBatch[i].x == startX + width &&
                     pixelBatch[i].color == currentColor) {
-                    width++; // Extend the current run
+                    width++; 
                 } else {
-                    // Draw the current run
+                    
                     int px = startX * 4;
                     int py = startY * 4;
                     tft.fillRect(px, py, width * 4, 4, currentColor);
 
-                    // Start a new run
+                    
                     startX = pixelBatch[i].x;
                     startY = pixelBatch[i].y;
                     currentColor = pixelBatch[i].color;
@@ -282,24 +285,24 @@ void display_task(void *pvParameters) {
                 }
             }
 
-            // Draw the final run
+           
             int px = startX * 4;
             int py = startY * 4;
             tft.fillRect(px, py, width * 4, 4, currentColor);
 
-            // Yield periodically to prevent watchdog timer issues
+            
             if (xTaskGetTickCount() - lastYield > pdMS_TO_TICKS(20)) {
-                vTaskDelay(1); // Short delay to allow other tasks to run
+                vTaskDelay(1); 
                 lastYield = xTaskGetTickCount();
             }
         } else {
-            // If no pixels were available, wait for some to arrive
+            
             if (xQueueReceive(pixelQueue, &pixel, pdMS_TO_TICKS(20))) {
                 int px = pixel.x * 4;
                 int py = pixel.y * 4;
                 tft.fillRect(px, py, 4, 4, pixel.color);
             } else {
-                // No pixels to process, yield to other tasks
+                
                 vTaskDelay(1);
             }
         }
@@ -359,26 +362,127 @@ void live_pixel_init_queue() {
 }
 
 void live_pixel_launch_tasks() {
+ 
+    initialization_complete = false;
+    exit_in_progress = false;
+    websocket_connected = false;
+    last_reconnect_attempt = 0;
+    esp32_ip = "Connecting...";
+    server_task_handle = NULL;
+    display_task_handle = NULL;
+    
+    
     tft.fillScreen(TFT_BLACK);
     draw_centered_text("Starting...", 135, TFT_WHITE, 1);
 
+   
+    if (exit_in_progress) {
+        live_pixel_exit();
+        return;
+    }
+
+    
+    if (pixelQueue != NULL) {
+        vQueueDelete(pixelQueue);
+    }
+    pixelQueue = xQueueCreate(256, sizeof(PixelData));
+    if (pixelQueue == NULL) {
+        draw_centered_text("Queue Init Failed!", 135, TFT_RED, 1);
+        return;
+    }
+
+    
+    if (exit_in_progress) {
+        live_pixel_exit();
+        return;
+    }
+
+  
+    WiFi.mode(WIFI_STA);
+    vTaskDelay(pdMS_TO_TICKS(100));  
+
+    
+    if (exit_in_progress) {
+        live_pixel_exit();
+        return;
+    }
+
     connect_wifi();
 
+    
     client.onMessage(on_msg_callback);
     client.onEvent(on_events_callback);
 
+    
     connect_server();
 
-    xTaskCreatePinnedToCore(server_task, "server_task", 12288, NULL, 1, &server_task_handle, 0);
-    xTaskCreatePinnedToCore(display_task, "display_task", 8192, NULL, 1, &display_task_handle, 1);
+    
+    if (exit_in_progress) {
+        live_pixel_exit();
+        return;
+    }
+
+    
+    BaseType_t serverTaskCreated = xTaskCreatePinnedToCore(
+        server_task,
+        "server_task",
+        12288,
+        NULL,
+        1,
+        &server_task_handle,
+        0
+    );
+
+    if (serverTaskCreated != pdPASS) {
+        draw_centered_text("Server Task Failed!", 135, TFT_RED, 1);
+        live_pixel_exit();
+        return;
+    }
+
+    // Check if exit was requested during startup
+    if (exit_in_progress) {
+        live_pixel_exit();
+        return;
+    }
+
+    BaseType_t displayTaskCreated = xTaskCreatePinnedToCore(
+        display_task,
+        "display_task",
+        8192,
+        NULL,
+        1,
+        &display_task_handle,
+        1
+    );
+
+    if (displayTaskCreated != pdPASS) {
+        
+        if (server_task_handle != NULL) {
+            vTaskDelete(server_task_handle);
+            server_task_handle = NULL;
+        }
+        draw_centered_text("Display Task Failed!", 135, TFT_RED, 1);
+        live_pixel_exit();
+        return;
+    }
+
+    initialization_complete = true;
 }
 
 void live_pixel_exit() {
-    if (websocket_connected) {
-        client.close();
-        websocket_connected = false;
+    
+    if (exit_in_progress) return;
+    exit_in_progress = true;
+
+   
+    if (!initialization_complete) {
+        vTaskDelay(pdMS_TO_TICKS(100));
     }
 
+    
+    tft.fillScreen(TFT_BLACK);
+    
+    
     if (server_task_handle != NULL) {
         vTaskDelete(server_task_handle);
         server_task_handle = NULL;
@@ -389,7 +493,30 @@ void live_pixel_exit() {
         display_task_handle = NULL;
     }
 
+   
     if (pixelQueue != NULL) {
-        xQueueReset(pixelQueue);
+        vQueueDelete(pixelQueue);
+        pixelQueue = NULL;
     }
+
+   
+    if (websocket_connected) {
+        client.close();
+        websocket_connected = false;
+    }
+
+    
+    WiFi.disconnect(true);
+    WiFi.mode(WIFI_OFF);
+    
+    
+    websocket_connected = false;
+    last_reconnect_attempt = 0;
+    esp32_ip = "Connecting...";
+    initialization_complete = false;
+    exit_in_progress = false;
+    
+    
+    tft.fillScreen(TFT_BLACK);
+    vTaskDelay(pdMS_TO_TICKS(50));
 }
