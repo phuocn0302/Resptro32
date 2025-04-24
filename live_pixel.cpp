@@ -1,7 +1,7 @@
 #include "live_pixel.h"
 
-const char *WIFI_SSID = "502B";         
-const char *WIFI_PASSWORD = "110818032003";    
+const char *WIFI_SSID = "502B";
+const char *WIFI_PASSWORD = "110818032003";
 const char *SERVER_HOST = "ws://192.168.1.167:5173/ws";
 
 using namespace websockets;
@@ -19,7 +19,7 @@ struct PixelData {
 String esp32_ip = "Connecting...";
 bool websocket_connected = false;
 unsigned long last_reconnect_attempt = 0;
-const unsigned long RECONNECT_INTERVAL = 5000; // 5 seconds between reconnection attempts
+const unsigned long RECONNECT_INTERVAL = 5000;  // 5 seconds between reconnection attempts
 
 volatile bool initialization_complete = false;
 volatile bool exit_in_progress = false;
@@ -50,12 +50,9 @@ void connect_wifi() {
     }
 }
 
-void reset_screen()
-{
-    tft.fillRect(0, 0, 128, 128, TFT_WHITE);
-}
+void reset_screen() { tft.fillRect(0, 0, 128, 128, TFT_WHITE); }
 
-void draw_image(uint16_t* colorArray, int width, int height) {
+void draw_image(uint16_t *colorArray, int width, int height) {
     for (int y = 0; y < height; y++) {
         for (int x = 0; x < width; x++) {
             int index = y * width + x;
@@ -95,7 +92,7 @@ void on_msg_callback(WebsocketsMessage message) {
     }
 
     // Static buffer for pixel data to avoid repeated memory allocation
-    static PixelData pixelBuffer[64]; // Fixed-size buffer for pixel data
+    static PixelData pixelBuffer[64];  // Fixed-size buffer for pixel data
 
     // Handle chunked batch updates (new optimized format)
     if (msg.startsWith("chunk;")) {
@@ -106,7 +103,7 @@ void on_msg_callback(WebsocketsMessage message) {
         int fourthSemi = msg.indexOf(';', thirdSemi + 1);
 
         if (firstSemi < 0 || secondSemi < 0 || thirdSemi < 0 || fourthSemi < 0) {
-            return; // Invalid format
+            return;  // Invalid format
         }
 
         // Parse chunk metadata
@@ -228,14 +225,14 @@ void on_msg_callback(WebsocketsMessage message) {
 }
 
 void on_events_callback(WebsocketsEvent event, String data) {
-    if(event == WebsocketsEvent::ConnectionOpened) {
+    if (event == WebsocketsEvent::ConnectionOpened) {
         websocket_connected = true;
         tft.fillScreen(TFT_BLACK);
         reset_screen();
         draw_centered_text("Connected!", 135, TFT_GREEN, 1);
         String ipText = "IP: " + esp32_ip;
         draw_centered_text(ipText.c_str(), 145, TFT_WHITE, 1);
-    } else if(event == WebsocketsEvent::ConnectionClosed) {
+    } else if (event == WebsocketsEvent::ConnectionClosed) {
         websocket_connected = false;
         tft.fillScreen(TFT_BLACK);
         draw_centered_text("Disconnected", 135, TFT_RED, 1);
@@ -245,39 +242,30 @@ void on_events_callback(WebsocketsEvent event, String data) {
 
 void display_task(void *pvParameters) {
     PixelData pixel;
-    PixelData pixelBatch[32]; 
+    PixelData pixelBatch[32];
     int batchCount = 0;
     TickType_t lastYield = xTaskGetTickCount();
 
     while (true) {
-
-        
         batchCount = 0;
         while (batchCount < 32 && xQueueReceive(pixelQueue, &pixelBatch[batchCount], 0) == pdTRUE) {
             batchCount++;
         }
 
-        
         if (batchCount > 0) {
-            
-            
             int startX = pixelBatch[0].x;
             int startY = pixelBatch[0].y;
             uint16_t currentColor = pixelBatch[0].color;
             int width = 1;
 
             for (int i = 1; i < batchCount; i++) {
-                
-                if (pixelBatch[i].y == startY && pixelBatch[i].x == startX + width &&
-                    pixelBatch[i].color == currentColor) {
-                    width++; 
+                if (pixelBatch[i].y == startY && pixelBatch[i].x == startX + width && pixelBatch[i].color == currentColor) {
+                    width++;
                 } else {
-                    
                     int px = startX * 4;
                     int py = startY * 4;
                     tft.fillRect(px, py, width * 4, 4, currentColor);
 
-                    
                     startX = pixelBatch[i].x;
                     startY = pixelBatch[i].y;
                     currentColor = pixelBatch[i].color;
@@ -285,24 +273,20 @@ void display_task(void *pvParameters) {
                 }
             }
 
-           
             int px = startX * 4;
             int py = startY * 4;
             tft.fillRect(px, py, width * 4, 4, currentColor);
 
-            
             if (xTaskGetTickCount() - lastYield > pdMS_TO_TICKS(20)) {
-                vTaskDelay(1); 
+                vTaskDelay(1);
                 lastYield = xTaskGetTickCount();
             }
         } else {
-            
             if (xQueueReceive(pixelQueue, &pixel, pdMS_TO_TICKS(20))) {
                 int px = pixel.x * 4;
                 int py = pixel.y * 4;
                 tft.fillRect(px, py, 4, 4, pixel.color);
             } else {
-                
                 vTaskDelay(1);
             }
         }
@@ -311,7 +295,7 @@ void display_task(void *pvParameters) {
 
 void connect_server() {
     if (current_state == STATE_MENU) return;
-    
+
     if (websocket_connected) {
         return;
     }
@@ -337,8 +321,7 @@ void connect_server() {
         tft.fillScreen(TFT_BLACK);
         draw_centered_text("Connect failed", 135, TFT_RED, 1);
         draw_centered_text("Retrying in 5s...", 145, TFT_WHITE, 1);
-    }
-    else {
+    } else {
         reset_screen();
     }
 }
@@ -362,7 +345,6 @@ void live_pixel_init_queue() {
 }
 
 void live_pixel_launch_tasks() {
- 
     initialization_complete = false;
     exit_in_progress = false;
     websocket_connected = false;
@@ -370,18 +352,15 @@ void live_pixel_launch_tasks() {
     esp32_ip = "Connecting...";
     server_task_handle = NULL;
     display_task_handle = NULL;
-    
-    
+
     tft.fillScreen(TFT_BLACK);
     draw_centered_text("Starting...", 135, TFT_WHITE, 1);
 
-   
     if (exit_in_progress) {
         live_pixel_exit();
         return;
     }
 
-    
     if (pixelQueue != NULL) {
         vQueueDelete(pixelQueue);
     }
@@ -391,17 +370,14 @@ void live_pixel_launch_tasks() {
         return;
     }
 
-    
     if (exit_in_progress) {
         live_pixel_exit();
         return;
     }
 
-  
     WiFi.mode(WIFI_STA);
-    vTaskDelay(pdMS_TO_TICKS(100));  
+    vTaskDelay(pdMS_TO_TICKS(100));
 
-    
     if (exit_in_progress) {
         live_pixel_exit();
         return;
@@ -409,29 +385,17 @@ void live_pixel_launch_tasks() {
 
     connect_wifi();
 
-    
     client.onMessage(on_msg_callback);
     client.onEvent(on_events_callback);
 
-    
     connect_server();
 
-    
     if (exit_in_progress) {
         live_pixel_exit();
         return;
     }
 
-    
-    BaseType_t serverTaskCreated = xTaskCreatePinnedToCore(
-        server_task,
-        "server_task",
-        12288,
-        NULL,
-        1,
-        &server_task_handle,
-        0
-    );
+    BaseType_t serverTaskCreated = xTaskCreatePinnedToCore(server_task, "server_task", 12288, NULL, 1, &server_task_handle, 0);
 
     if (serverTaskCreated != pdPASS) {
         draw_centered_text("Server Task Failed!", 135, TFT_RED, 1);
@@ -445,18 +409,9 @@ void live_pixel_launch_tasks() {
         return;
     }
 
-    BaseType_t displayTaskCreated = xTaskCreatePinnedToCore(
-        display_task,
-        "display_task",
-        8192,
-        NULL,
-        1,
-        &display_task_handle,
-        1
-    );
+    BaseType_t displayTaskCreated = xTaskCreatePinnedToCore(display_task, "display_task", 8192, NULL, 1, &display_task_handle, 1);
 
     if (displayTaskCreated != pdPASS) {
-        
         if (server_task_handle != NULL) {
             vTaskDelete(server_task_handle);
             server_task_handle = NULL;
@@ -470,19 +425,15 @@ void live_pixel_launch_tasks() {
 }
 
 void live_pixel_exit() {
-    
     if (exit_in_progress) return;
     exit_in_progress = true;
 
-   
     if (!initialization_complete) {
         vTaskDelay(pdMS_TO_TICKS(100));
     }
 
-    
     tft.fillScreen(TFT_BLACK);
-    
-    
+
     if (server_task_handle != NULL) {
         vTaskDelete(server_task_handle);
         server_task_handle = NULL;
@@ -493,30 +444,25 @@ void live_pixel_exit() {
         display_task_handle = NULL;
     }
 
-   
     if (pixelQueue != NULL) {
         vQueueDelete(pixelQueue);
         pixelQueue = NULL;
     }
 
-   
     if (websocket_connected) {
         client.close();
         websocket_connected = false;
     }
 
-    
     WiFi.disconnect(true);
     WiFi.mode(WIFI_OFF);
-    
-    
+
     websocket_connected = false;
     last_reconnect_attempt = 0;
     esp32_ip = "Connecting...";
     initialization_complete = false;
     exit_in_progress = false;
-    
-    
+
     tft.fillScreen(TFT_BLACK);
     vTaskDelay(pdMS_TO_TICKS(50));
 }
