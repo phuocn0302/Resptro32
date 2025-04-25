@@ -159,23 +159,7 @@ void wifi_config_launch() {
 
     wifi_config_active = true;
 
-    BaseType_t taskCreated = xTaskCreatePinnedToCore(
-        wifi_config_task,
-        "wifi_config_task",
-        32768,
-        NULL,
-        2,
-        &wifi_task_handle,
-        0
-    );
-
-    if (taskCreated != pdPASS) {
-        tft.fillScreen(TFT_BLACK);
-        draw_centered_text("Task creation failed", 60, TFT_RED, 1);
-        wifi_config_active = false;
-        delete wifiManager;
-        wifiManager = NULL;
-    }
+    xTaskCreatePinnedToCore(wifi_config_task, "wifi_config_task", 32768, NULL, 2, &wifi_task_handle, 0);
 }
 
 void wifi_config_exit() {

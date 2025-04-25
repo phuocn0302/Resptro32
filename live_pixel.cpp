@@ -318,17 +318,6 @@ void server_task(void *pvParameters) {
     }
 }
 
-void handle_exit_button(void *pvParameters) {
-    while (!exit_in_progress) {
-        if (!digitalRead(BTN_A)) {
-            exit_requested = true;
-            break;
-        }
-        vTaskDelay(pdMS_TO_TICKS(50));
-    }
-    vTaskDelete(NULL);
-}
-
 void live_pixel_init_queue() {
     // Create a smaller queue size - we're now processing pixels in chunks
     // so we don't need such a large queue
@@ -347,19 +336,12 @@ void live_pixel_launch_tasks() {
     tft.fillScreen(TFT_BLACK);
     draw_centered_text("Starting Live Pixel...", 40, TFT_WHITE, 1);
     
-    // Check WiFi connection first
     if (WiFi.status() != WL_CONNECTED) {
         tft.fillScreen(TFT_BLACK);
         draw_centered_text("No WiFi Connection", 40, TFT_YELLOW, 1);
         draw_centered_text("Live Pixel requires WiFi", 60, TFT_WHITE, 1);
         draw_centered_text("Go to WiFi Config", 80, TFT_WHITE, 1);
         draw_centered_text("Press A to exit", 110, TFT_CYAN, 1);
-        
-        // Create task to handle exit button
-        TaskHandle_t exitTaskHandle;
-        xTaskCreatePinnedToCore(handle_exit_button, "exit_button_task", 2048, NULL, 1, &exitTaskHandle, 1);
-        
-        // We won't continue initialization
         return;
     }
 
@@ -368,14 +350,7 @@ void live_pixel_launch_tasks() {
         return;
     }
 
-    if (pixelQueue != NULL) {
-        vQueueDelete(pixelQueue);
-    }
-    pixelQueue = xQueueCreate(256, sizeof(PixelData));
-    if (pixelQueue == NULL) {
-        draw_centered_text("Queue Init Failed!", 135, TFT_RED, 1);
-        return;
-    }
+    xQueueReset(pixelQueue);
 
     if (exit_in_progress) {
         live_pixel_exit();
@@ -405,35 +380,8 @@ void live_pixel_launch_tasks() {
         return;
     }
 
-    BaseType_t serverTaskCreated = xTaskCreatePinnedToCore(server_task, "server_task", 12288, NULL, 1, &server_task_handle, 0);
-
-    if (serverTaskCreated != pdPASS) {
-        draw_centered_text("Server Task Failed!", 135, TFT_RED, 1);
-        live_pixel_exit();
-        return;
-    }
-
-    // Check if exit was requested during startup
-    if (exit_in_progress) {
-        live_pixel_exit();
-        return;
-    }
-
-    BaseType_t displayTaskCreated = xTaskCreatePinnedToCore(display_task, "display_task", 8192, NULL, 1, &display_task_handle, 1);
-
-    if (displayTaskCreated != pdPASS) {
-        if (server_task_handle != NULL) {
-            vTaskDelete(server_task_handle);
-            server_task_handle = NULL;
-        }
-        draw_centered_text("Display Task Failed!", 135, TFT_RED, 1);
-        live_pixel_exit();
-        return;
-    }
-    
-    // Create task to handle exit button
-    TaskHandle_t exitTaskHandle;
-    xTaskCreatePinnedToCore(handle_exit_button, "exit_button_task", 2048, NULL, 1, &exitTaskHandle, 1);
+    xTaskCreatePinnedToCore(server_task, "server_task", 12288, NULL, 1, &server_task_handle, 0);
+    xTaskCreatePinnedToCore(display_task, "display_task", 8192, NULL, 1, &display_task_handle, 1);
 
     initialization_complete = true;
 }
