@@ -189,7 +189,6 @@ void try_connect_wifi() {
     WiFi.mode(WIFI_STA);
     WiFi.begin();
 
-    // Wait up to 10 seconds for connection
     unsigned long startAttemptTime = millis();
 
     while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < 5000) {
@@ -236,7 +235,7 @@ void loop() {
     
     if (menu_requested) {
         show_menu();
-        current_state == STATE_MENU;
+        current_state = STATE_MENU;
         menu_requested = false;
     }
     delay(10);
