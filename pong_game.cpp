@@ -19,7 +19,7 @@ struct PongGame {
     int score_limit;
 };
 
-// Pong game constants
+
 const int PADDLE_WIDTH = 4;
 const int PADDLE_HEIGHT = 20;
 const int BALL_SIZE = 4;
@@ -32,18 +32,18 @@ TaskHandle_t pong_task_handle = NULL;
 TaskHandle_t pong_input_task_handle = NULL;
 
 void show_pong_settings() {
-    static int selected_option = 0;  // 0 for difficulty, 1 for score limit
-    static int difficulty_idx = 1;   // Default to NORMAL
-    static int score_limit_idx = 0;  // Default to 5
+    static int selected_option = 0;  
+    static int difficulty_idx = 1;   
+    static int score_limit_idx = 0;  
     bool settings_done = false;
 
     tft.fillScreen(TFT_BLACK);
 
     while (!settings_done && current_state == STATE_PONG) {
-        // Draw title
+
         draw_centered_text("Pong Settings", 20, TFT_WHITE, 1);
 
-        // Draw difficulty section
+
         tft.setTextSize(1);
         if (selected_option == 0) {
             tft.setTextColor(TFT_GREEN);
@@ -53,7 +53,6 @@ void show_pong_settings() {
         draw_centered_text("Difficulty:", 50, TFT_BLUE, 1);
         draw_centered_text(DIFFICULTY_NAMES[difficulty_idx], 65, TFT_YELLOW, 1);
 
-        // Draw score limit section
         if (selected_option == 1) {
             tft.setTextColor(TFT_GREEN);
             tft.setCursor(10, 90);
@@ -64,16 +63,16 @@ void show_pong_settings() {
         sprintf(score_text, "%d", SCORE_LIMITS[score_limit_idx]);
         draw_centered_text(score_text, 105, TFT_YELLOW, 1);
 
-        // Draw instructions
+
         draw_centered_text("UP/DOWN: Select", 130, TFT_CYAN, 1);
         draw_centered_text("LEFT/RIGHT: Change", 140, TFT_CYAN, 1);
         draw_centered_text("Press B to start", 150, TFT_GREEN, 1);
 
-        // Handle input with proper debouncing
+
         if (!digitalRead(BTN_UP)) {
             int old_option = selected_option;
             selected_option = 0;
-            // Clear only the old and new arrow positions
+
             tft.setTextColor(TFT_BLACK);
             tft.setCursor(10, old_option == 0 ? 50 : 90);
             tft.print(">");
@@ -83,7 +82,7 @@ void show_pong_settings() {
         if (!digitalRead(BTN_DOWN)) {
             int old_option = selected_option;
             selected_option = 1;
-            // Clear only the old and new arrow positions
+
             tft.setTextColor(TFT_BLACK);
             tft.setCursor(10, old_option == 0 ? 50 : 90);
             tft.print(">");
@@ -93,11 +92,11 @@ void show_pong_settings() {
         if (!digitalRead(BTN_LEFT)) {
             if (selected_option == 0) {
                 difficulty_idx = (difficulty_idx - 1 + NUM_DIFFICULTIES) % NUM_DIFFICULTIES;
-                // Clear only the value area
+
                 tft.fillRect(0, 65, SCREEN_WIDTH, 10, TFT_BLACK);
             } else {
                 score_limit_idx = (score_limit_idx - 1 + NUM_SCORE_LIMITS) % NUM_SCORE_LIMITS;
-                // Clear only the value area
+
                 tft.fillRect(0, 105, SCREEN_WIDTH, 10, TFT_BLACK);
             }
             while (!digitalRead(BTN_LEFT)) { delay(10); }
@@ -106,11 +105,11 @@ void show_pong_settings() {
         if (!digitalRead(BTN_RIGHT)) {
             if (selected_option == 0) {
                 difficulty_idx = (difficulty_idx + 1) % NUM_DIFFICULTIES;
-                // Clear only the value area
+
                 tft.fillRect(0, 65, SCREEN_WIDTH, 10, TFT_BLACK);
             } else {
                 score_limit_idx = (score_limit_idx + 1) % NUM_SCORE_LIMITS;
-                // Clear only the value area
+
                 tft.fillRect(0, 105, SCREEN_WIDTH, 10, TFT_BLACK);
             }
             while (!digitalRead(BTN_RIGHT)) { delay(10); }
@@ -125,13 +124,13 @@ void show_pong_settings() {
         delay(10);
     }
 
-    // Apply settings to game
+
     pong.difficulty = static_cast<Difficulty>(difficulty_idx);
     pong.score_limit = SCORE_LIMITS[score_limit_idx];
 }
 
 void initialize_pong_game() {
-    show_pong_settings();  // Get user settings first
+    show_pong_settings();  
     
     xSemaphoreTake(pong_mutex, portMAX_DELAY);
 
@@ -145,8 +144,8 @@ void initialize_pong_game() {
         .player_score = 0,
         .ai_score = 0,
         .running = 1,
-        .difficulty = pong.difficulty,  // Preserve the selected difficulty
-        .score_limit = pong.score_limit // Preserve the selected score limit
+        .difficulty = pong.difficulty,  
+        .score_limit = pong.score_limit 
     };
 
     tft.fillScreen(TFT_BLACK);
