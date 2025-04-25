@@ -1,7 +1,7 @@
 #include "live_pixel.h"
 #include "wifi_config.h"
 
-const char *SERVER_HOST = "ws://192.168.1.167:5173/ws";
+String server_url;
 
 using namespace websockets;
 WebsocketsClient client;
@@ -292,11 +292,15 @@ void connect_server() {
     draw_centered_text(ipText.c_str(), 135, TFT_WHITE, 1);
     draw_centered_text("Connect server...", 145, TFT_WHITE, 1);
 
-    bool connected = client.connect(SERVER_HOST);
+    server_url = get_ws_url();  // Get the configured WebSocket URL
+    bool connected = client.connect(server_url.c_str());
+    
     if (!connected) {
         tft.fillScreen(TFT_BLACK);
         draw_centered_text("Connect failed", 135, TFT_RED, 1);
-        draw_centered_text("Retrying in 5s...", 145, TFT_WHITE, 1);
+        draw_centered_text("Press A to exit", 15, TFT_WHITE, 1);
+        exit_requested = true;  // Request exit
+        return;
     } else {
         reset_screen();
     }
@@ -306,7 +310,7 @@ void server_task(void *pvParameters) {
     while (true) {
         if (client.available()) {
             client.poll();
-        } else if (!websocket_connected) {
+        } else if (!websocket_connected && !exit_requested) {
             connect_server();
         }
 
