@@ -9,15 +9,15 @@ bool wifi_config_active = false;
 
 WiFiManagerParameter* wsServerParam;
 WiFiManagerParameter* wsPortParam;
-char wsServer[40] = "192.168.1.167";  // Default value
-char wsPort[6] = "5173";              // Default value
+char wsServer[40] = "192.168.1.167";  
+char wsPort[6] = "5173";              
 
 void saveWsConfigCallback() {
-    // Copy values to the global variables
+    
     strncpy(wsServer, wsServerParam->getValue(), sizeof(wsServer));
     strncpy(wsPort, wsPortParam->getValue(), sizeof(wsPort));
     
-    // Save to preferences
+    
     Preferences preferences;
     preferences.begin("livepixel", false);
     preferences.putString("wsServer", wsServer);
@@ -62,7 +62,7 @@ void wifi_config_task(void *pvParameters) {
     draw_centered_text("in browser", 95, TFT_WHITE, 1);
     draw_centered_text("Press A to exit", 115, TFT_YELLOW, 1);
 
-    // Ensure proper delay between mode changes
+    
     WiFi.disconnect(true);
     vTaskDelay(pdMS_TO_TICKS(1000));
     
@@ -94,9 +94,11 @@ void wifi_config_task(void *pvParameters) {
         wifi_ip = WiFi.localIP().toString();
         String ipText = "IP: " + wifi_ip;
         draw_centered_text(ipText.c_str(), 80, TFT_WHITE, 1);
-        String wsText = String("WS: ") + wsServer + ":" + wsPort;
+        String wsText = String("WS: ") + wsServer;
         draw_centered_text(wsText.c_str(), 100, TFT_WHITE, 1);
-        draw_centered_text("Press A", 120, TFT_WHITE, 1);
+        String portText = String("Port: ") + wsPort;
+        draw_centered_text(portText.c_str(), 110, TFT_WHITE, 1);
+        draw_centered_text("Press A", 130, TFT_WHITE, 1);
         vTaskDelay(pdMS_TO_TICKS(2000));
     } else {
         tft.fillScreen(TFT_BLACK);
@@ -114,7 +116,7 @@ void wifi_config_launch() {
         return;
     }
 
-    // Load saved WebSocket settings
+    
     loadWsConfig();
 
     if (wifiManager != NULL) {
@@ -139,11 +141,11 @@ void wifi_config_launch() {
         return;
     }
 
-    // Create custom parameters
+    
     wsServerParam = new WiFiManagerParameter("server", "Live Pixel Server IP", wsServer, 40);
     wsPortParam = new WiFiManagerParameter("port", "Live Pixel Server Port", wsPort, 6);
 
-    // Add parameters to WiFiManager
+    
     wifiManager->addParameter(wsServerParam);
     wifiManager->addParameter(wsPortParam);
 
