@@ -406,10 +406,7 @@ void live_pixel_exit() {
         display_task_handle = NULL;
     }
 
-    if (pixelQueue != NULL) {
-        vQueueDelete(pixelQueue);
-        pixelQueue = NULL;
-    }
+    xQueueReset(pixelQueue);
 
     if (websocket_connected) {
         client.close();
