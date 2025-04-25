@@ -7,41 +7,8 @@ String wifi_ip = "Not Connected";
 bool wifi_initialized = false;
 bool wifi_config_active = false;
 
-WiFiManagerParameter* wsServerParam;
-WiFiManagerParameter* wsPortParam;
-char wsServer[40] = "192.168.1.167";  
-char wsPort[6] = "5173";              
-
-void saveWsConfigCallback() {
-    
-    strncpy(wsServer, wsServerParam->getValue(), sizeof(wsServer));
-    strncpy(wsPort, wsPortParam->getValue(), sizeof(wsPort));
-    
-    
-    Preferences preferences;
-    preferences.begin("livepixel", false);
-    preferences.putString("wsServer", wsServer);
-    preferences.putString("wsPort", wsPort);
-    preferences.end();
-    
-    draw_centered_text("Settings saved!", 135, TFT_GREEN, 1);
-    vTaskDelay(pdMS_TO_TICKS(1000));
-}
-
-void loadWsConfig() {
-    Preferences preferences;
-    preferences.begin("livepixel", true);
-    String savedServer = preferences.getString("wsServer", "");
-    String savedPort = preferences.getString("wsPort", "");
-    preferences.end();
-
-    if (savedServer.length() > 0) {
-        strncpy(wsServer, savedServer.c_str(), sizeof(wsServer));
-    }
-    if (savedPort.length() > 0) {
-        strncpy(wsPort, savedPort.c_str(), sizeof(wsPort));
-    }
-}
+const char* WS_SERVER = "olaz.duckdns.org";
+const char* WS_PORT = "5173";
 
 void wifi_config_task(void *pvParameters) {
     if (!wifiManager) {
@@ -62,13 +29,10 @@ void wifi_config_task(void *pvParameters) {
     draw_centered_text("in browser", 95, TFT_WHITE, 1);
     draw_centered_text("Press A to exit", 115, TFT_YELLOW, 1);
 
-    
     WiFi.disconnect(true);
     vTaskDelay(pdMS_TO_TICKS(1000));
-    
     WiFi.mode(WIFI_OFF);
     vTaskDelay(pdMS_TO_TICKS(1000));
-    
     WiFi.mode(WIFI_AP_STA);
     vTaskDelay(pdMS_TO_TICKS(500));
     WiFi.softAPConfig(IPAddress(192, 168, 4, 1), IPAddress(192, 168, 4, 1), IPAddress(255, 255, 255, 0));
@@ -94,9 +58,9 @@ void wifi_config_task(void *pvParameters) {
         wifi_ip = WiFi.localIP().toString();
         String ipText = "IP: " + wifi_ip;
         draw_centered_text(ipText.c_str(), 80, TFT_WHITE, 1);
-        String wsText = String("WS: ") + wsServer;
+        String wsText = String("WS: ") + WS_SERVER;
         draw_centered_text(wsText.c_str(), 100, TFT_WHITE, 1);
-        String portText = String("Port: ") + wsPort;
+        String portText = String("Port: ") + WS_PORT;
         draw_centered_text(portText.c_str(), 110, TFT_WHITE, 1);
         draw_centered_text("Press A", 130, TFT_WHITE, 1);
         vTaskDelay(pdMS_TO_TICKS(2000));
@@ -115,9 +79,6 @@ void wifi_config_launch() {
     if (wifi_config_active) {
         return;
     }
-
-    
-    loadWsConfig();
 
     if (wifiManager != NULL) {
         delete wifiManager;
@@ -141,15 +102,6 @@ void wifi_config_launch() {
         return;
     }
 
-    
-    wsServerParam = new WiFiManagerParameter("server", "Live Pixel Server IP", wsServer, 40);
-    wsPortParam = new WiFiManagerParameter("port", "Live Pixel Server Port", wsPort, 6);
-
-    
-    wifiManager->addParameter(wsServerParam);
-    wifiManager->addParameter(wsPortParam);
-
-    wifiManager->setSaveConfigCallback(saveWsConfigCallback);
     wifiManager->setAPStaticIPConfig(IPAddress(192, 168, 4, 1), IPAddress(192, 168, 4, 1), IPAddress(255, 255, 255, 0));
     wifiManager->setHostname("Resptro32");
     wifiManager->setConfigPortalTimeout(0);
@@ -241,10 +193,9 @@ String get_wifi_ip() {
     } else {
         wifi_ip = "Not Connected";
     }
-
     return wifi_ip;
 }
 
 String get_ws_url() {
-    return String("ws://") + String(wsServer) + ":" + String(wsPort) + "/ws";
+    return String("ws://") + String(WS_SERVER) + ":" + String(WS_PORT) + "/ws";
 }
