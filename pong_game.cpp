@@ -1,5 +1,11 @@
 #include "pong_game.h"
 
+enum Difficulty { EASY, NORMAL, HARD };
+const char* DIFFICULTY_NAMES[] = {"Easy", "Normal", "Hard"};
+const int SCORE_LIMITS[] = {5, 10, 15};
+const int NUM_DIFFICULTIES = 3;
+const int NUM_SCORE_LIMITS = 3;
+
 struct PongGame {
     Position player;
     Position ai;
@@ -9,9 +15,11 @@ struct PongGame {
     int player_score;
     int ai_score;
     uint8_t running;
+    Difficulty difficulty;
+    int score_limit;
 };
 
-// Pong game constants
+
 const int PADDLE_WIDTH = 4;
 const int PADDLE_HEIGHT = 20;
 const int BALL_SIZE = 4;
@@ -23,19 +31,122 @@ SemaphoreHandle_t pong_mutex;
 TaskHandle_t pong_task_handle = NULL;
 TaskHandle_t pong_input_task_handle = NULL;
 
+void show_pong_settings() {
+    static int selected_option = 0;  
+    static int difficulty_idx = 1;   
+    static int score_limit_idx = 0;  
+    bool settings_done = false;
+
+    tft.fillScreen(TFT_BLACK);
+
+    while (!settings_done && current_state == STATE_PONG) {
+
+        draw_centered_text("Pong Settings", 20, TFT_WHITE, 1);
+
+
+        tft.setTextSize(1);
+        if (selected_option == 0) {
+            tft.setTextColor(TFT_GREEN);
+            tft.setCursor(10, 50);
+            tft.print(">");
+        }
+        draw_centered_text("Difficulty:", 50, TFT_BLUE, 1);
+        draw_centered_text(DIFFICULTY_NAMES[difficulty_idx], 65, TFT_YELLOW, 1);
+
+        if (selected_option == 1) {
+            tft.setTextColor(TFT_GREEN);
+            tft.setCursor(10, 90);
+            tft.print(">");
+        }
+        draw_centered_text("Score Limit:", 90, TFT_BLUE, 1);
+        char score_text[3];
+        sprintf(score_text, "%d", SCORE_LIMITS[score_limit_idx]);
+        draw_centered_text(score_text, 105, TFT_YELLOW, 1);
+
+
+        draw_centered_text("UP/DOWN: Select", 130, TFT_CYAN, 1);
+        draw_centered_text("LEFT/RIGHT: Change", 140, TFT_CYAN, 1);
+        draw_centered_text("Press B to start", 150, TFT_GREEN, 1);
+
+
+        if (!digitalRead(BTN_UP)) {
+            int old_option = selected_option;
+            selected_option = 0;
+
+            tft.setTextColor(TFT_BLACK);
+            tft.setCursor(10, old_option == 0 ? 50 : 90);
+            tft.print(">");
+            while (!digitalRead(BTN_UP)) { delay(10); }
+            delay(50);
+        }
+        if (!digitalRead(BTN_DOWN)) {
+            int old_option = selected_option;
+            selected_option = 1;
+
+            tft.setTextColor(TFT_BLACK);
+            tft.setCursor(10, old_option == 0 ? 50 : 90);
+            tft.print(">");
+            while (!digitalRead(BTN_DOWN)) { delay(10); }
+            delay(50);
+        }
+        if (!digitalRead(BTN_LEFT)) {
+            if (selected_option == 0) {
+                difficulty_idx = (difficulty_idx - 1 + NUM_DIFFICULTIES) % NUM_DIFFICULTIES;
+
+                tft.fillRect(0, 65, SCREEN_WIDTH, 10, TFT_BLACK);
+            } else {
+                score_limit_idx = (score_limit_idx - 1 + NUM_SCORE_LIMITS) % NUM_SCORE_LIMITS;
+
+                tft.fillRect(0, 105, SCREEN_WIDTH, 10, TFT_BLACK);
+            }
+            while (!digitalRead(BTN_LEFT)) { delay(10); }
+            delay(50);
+        }
+        if (!digitalRead(BTN_RIGHT)) {
+            if (selected_option == 0) {
+                difficulty_idx = (difficulty_idx + 1) % NUM_DIFFICULTIES;
+
+                tft.fillRect(0, 65, SCREEN_WIDTH, 10, TFT_BLACK);
+            } else {
+                score_limit_idx = (score_limit_idx + 1) % NUM_SCORE_LIMITS;
+
+                tft.fillRect(0, 105, SCREEN_WIDTH, 10, TFT_BLACK);
+            }
+            while (!digitalRead(BTN_RIGHT)) { delay(10); }
+            delay(50);
+        }
+        if (!digitalRead(BTN_B)) {
+            settings_done = true;
+            while (!digitalRead(BTN_B)) { delay(10); }
+            delay(50);
+        }
+
+        delay(10);
+    }
+
+
+    pong.difficulty = static_cast<Difficulty>(difficulty_idx);
+    pong.score_limit = SCORE_LIMITS[score_limit_idx];
+}
+
 void initialize_pong_game() {
+    show_pong_settings();  
+    
     xSemaphoreTake(pong_mutex, portMAX_DELAY);
 
-    pong =
-        (PongGame){.player = {BORDER_SIZE, (SCREEN_HEIGHT - PADDLE_HEIGHT) / 2},
-                   .ai = {SCREEN_WIDTH - BORDER_SIZE - PADDLE_WIDTH,
-                          (SCREEN_HEIGHT - PADDLE_HEIGHT) / 2},
-                   .ball = {SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2},
-                   .ball_dx = (rand() % 2) ? 2 : -2,
-                   .ball_dy = (rand() % 3) - 1,
-                   .player_score = 0,
-                   .ai_score = 0,
-                   .running = 1};
+    pong = (PongGame){
+        .player = {BORDER_SIZE, (SCREEN_HEIGHT - PADDLE_HEIGHT) / 2},
+        .ai = {SCREEN_WIDTH - BORDER_SIZE - PADDLE_WIDTH,
+               (SCREEN_HEIGHT - PADDLE_HEIGHT) / 2},
+        .ball = {SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2},
+        .ball_dx = (rand() % 2) ? 2 : -2,
+        .ball_dy = (rand() % 3) - 1,
+        .player_score = 0,
+        .ai_score = 0,
+        .running = 1,
+        .difficulty = pong.difficulty,  
+        .score_limit = pong.score_limit 
+    };
 
     tft.fillScreen(TFT_BLACK);
     tft.fillRect(0, 0, SCREEN_WIDTH, BORDER_SIZE, TFT_WHITE);
@@ -102,16 +213,22 @@ void handle_paddle_collisions() {
 }
 
 void update_ai_paddle() {
-    const int prediction_y =
-        pong.ball.y + (pong.ball_dy * AI_PREDICTION_FRAMES);
+    const int prediction_frames = pong.difficulty == EASY ? 3 : 
+                                (pong.difficulty == NORMAL ? 6 : 9);
+    const int max_speed = pong.difficulty == EASY ? 2 : 
+                         (pong.difficulty == NORMAL ? 4 : 6);
+    
+    const int prediction_y = pong.ball.y + (pong.ball_dy * prediction_frames);
     const int ai_center = pong.ai.y + PADDLE_HEIGHT / 2;
-    const int target_y = prediction_y - PADDLE_HEIGHT / 2 + (rand() % 7 - 3);
+    const int target_y = prediction_y - PADDLE_HEIGHT / 2 + 
+                        (pong.difficulty == HARD ? 0 : (rand() % 7 - 3));
 
     const int constrained_target = constrain(
         target_y, BORDER_SIZE, SCREEN_HEIGHT - BORDER_SIZE - PADDLE_HEIGHT);
 
-    pong.ai.y += constrain((constrained_target - ai_center) / 2, -4, 4);
-    pong.ai.y = constrain(pong.ai.y, BORDER_SIZE, SCREEN_HEIGHT - BORDER_SIZE - PADDLE_HEIGHT);
+    pong.ai.y += constrain((constrained_target - ai_center) / 2, -max_speed, max_speed);
+    pong.ai.y = constrain(pong.ai.y, BORDER_SIZE, 
+                         SCREEN_HEIGHT - BORDER_SIZE - PADDLE_HEIGHT);
 }
 
 void reset_ball(bool player_scored) {
@@ -159,6 +276,7 @@ void pong_gameover() {
 }
 
 void pong_task(void *pv) {
+    show_pong_settings();
     initialize_pong_game();
     static int prev_player_y = pong.player.y;
     static int prev_ai_y = pong.ai.y;
@@ -183,7 +301,7 @@ void pong_task(void *pv) {
         update_scores();
         render_game_state();
 
-        if (pong.player_score >= MAX_SCORE || pong.ai_score >= MAX_SCORE) {
+        if (pong.player_score >= pong.score_limit || pong.ai_score >= pong.score_limit) {
             pong.running = 0;
         }
 
@@ -199,8 +317,9 @@ void pong_task(void *pv) {
 void pong_init_mutex() { pong_mutex = xSemaphoreCreateMutex(); }
 
 void pong_launch_tasks() {
-    xTaskCreatePinnedToCore(pong_task, "Pong", 4096, NULL, 2, &pong_task_handle, 1);
-    xTaskCreatePinnedToCore(pong_input_task, "PongInput", 2048, NULL, 3, &pong_input_task_handle, 0);
+    initialize_pong_game();
+    xTaskCreate(pong_task, "PongTask", 4096, NULL, 1, &pong_task_handle);
+    xTaskCreate(pong_input_task, "PongInput", 4096, NULL, 1, &pong_input_task_handle);
 }
 
 void pong_exit() {
