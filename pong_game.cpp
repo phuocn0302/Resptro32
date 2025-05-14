@@ -23,8 +23,8 @@ const int PADDLE_WIDTH = 4;
 const int PADDLE_HEIGHT = 20;
 const int BALL_SIZE = 4;
 const float BALL_SPEED_INCREASE = 0.5;  // How much to increase speed on each hit
-const float MAX_BALL_SPEED_X = 8.0;     // Maximum horizontal ball speed
-const float MAX_BALL_SPEED_Y = 6.0;     // Maximum vertical ball speed
+const float MAX_BALL_SPEED_X = 5.0;     // Maximum horizontal ball speed
+const float MAX_BALL_SPEED_Y = 3.0;     // Maximum vertical ball speed
 const int MAX_SCORE = 20;
 
 PongGame pong;
@@ -253,9 +253,9 @@ void update_ai_paddle() {
     // Calculate prediction frames based on difficulty and ball speed
     float speed_factor = min(6.0f / abs(pong.ball_dx), 1.0f);  // Adjust prediction based on ball speed
     
-    const int base_prediction_frames = pong.difficulty == EASY ? 3 : 
-                                      (pong.difficulty == NORMAL ? 6 : 
-                                      (pong.difficulty == HARD ? 9 : 15));
+    const int base_prediction_frames = pong.difficulty == EASY ? 1 : 
+                                      (pong.difficulty == NORMAL ? 3 : 
+                                      (pong.difficulty == HARD ? 8 : 15));
                                       
     const int prediction_frames = round(base_prediction_frames * speed_factor);
     
@@ -389,7 +389,20 @@ void pong_task(void *pv) {
         handle_paddle_collisions();
         update_ai_paddle();
         update_scores();
-        render_game_state();
+        
+        // Render game elements
+        tft.fillRect(pong.player.x, pong.player.y, PADDLE_WIDTH, PADDLE_HEIGHT, TFT_WHITE);
+        tft.fillRect(pong.ai.x, pong.ai.y, PADDLE_WIDTH, PADDLE_HEIGHT, TFT_WHITE);
+        tft.fillRect(pong.ball.x, pong.ball.y, BALL_SIZE, BALL_SIZE, TFT_WHITE);
+        
+        // Always render score on top
+        tft.setTextColor(TFT_WHITE);
+        tft.fillRect(SCREEN_WIDTH/4 - 10, BORDER_SIZE + 2, 20, 10, TFT_BLACK); // Clear score area
+        tft.fillRect(3*SCREEN_WIDTH/4 - 10, BORDER_SIZE + 2, 20, 10, TFT_BLACK);
+        tft.setCursor(SCREEN_WIDTH/4 - 8, BORDER_SIZE + 2);
+        tft.print(pong.player_score);
+        tft.setCursor(3*SCREEN_WIDTH/4 - 8, BORDER_SIZE + 2);
+        tft.print(pong.ai_score);
 
         if (pong.player_score >= pong.score_limit || pong.ai_score >= pong.score_limit) {
             pong.running = 0;
